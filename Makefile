@@ -1,4 +1,4 @@
-PANDOC_INCLUDES = ./Latex-Macros.md
+PANDOC_INCLUDES = .latex/Latex-Macros.md
 SUBDIRS = $(wildcard */)
 SOURCES = $(wildcard $(addsuffix *.md, $(SUBDIRS)))
 OBJ = $(patsubst %.md, %.pdf, $(SOURCES))
