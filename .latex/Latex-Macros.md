@@ -1,6 +1,6 @@
 ---
 header-includes:
-- \usepackage{amsmath,amsthm}
+- \usepackage{amssymb,amsthm}
 - \usepackage[sans]{dsfont}
 - \theoremstyle{definition}
 - \newcommand\noop[1]{#1}
