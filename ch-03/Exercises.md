@@ -75,8 +75,8 @@ being the "subtree relation".
 However that's not very precise, so let us make it so and get rid of those
 scare quotes.
 
-First of all, let's agree that we have fixed an alpha $\Sigma$ containing all
-letters \texttt{a}, \ldots, \texttt{z}, \texttt{A}, \ldots, \texttt{Z}$ as well
+First of all, let's agree that we have fixed an alphabet $\Sigma$ containing all
+letters $\texttt{a}, \ldots, \texttt{z}, \texttt{A}, \ldots, \texttt{Z}$ as well
 as the symbol $\rightarrow$. On the set of strings (of finite length) there is
 a concatenation operation, which we will denote by placing two strings
 together, e.g. if $t_1$ and $t_2$ are metavariables denoting the strings
@@ -87,6 +87,40 @@ ambiguous, since an expression like \texttt{xy} can be either read as the
 concatenation of the strings \texttt{x} and \texttt{y}, or as the string
 \texttt{xy}; but, since both of these denote the same string, this ambiguity is
 only in the sense, not the denotation.
+
+Second, let's agree that an $n$-fold ($n \geq 1$) cartesian product of sets
+$$X_1 \times \ldots \times X_n$$
+is defined inductively in terms of an $n-1$-fold cartesian product and the
+usual (binary) cartesian product as
+$$X_1 \times \ldots \times X_n \equiv X_1\times (X_2\times \ldots X_n)$$
+, where by definition the $0$-fold cartesian product is equal to
+$$() \equiv \{\texttt{nil}\}$$
+and the set $\texttt{nil} \equiv \emptyset$ is not a pair^[Why not?].
+
+Note that according to this definition, *the $2$-fold cartesian product is
+different from the (binary) cartesian product*, and the $1$-fold cartesian
+product of a set $X$ is not equal to $X$ but to
+$$X \times ().$$
+
+This may seem like a silly definition, but this is the standard way to
+introduce lists in the context of programming languages, and moreover it is the
+*correct* way if you want to be able to talk about the $i$-th element of an
+$n$-tuple without knowing a priori whether $n = i$ or $n > i$.
+
+With that being said, $n$-tuples are accordingly defined via induction by the
+definitional equality
+$$(x_1, \ldots, x_n) \equiv (x_1, (x_2,\ldots, x_n))$$
+and the convention that the $0$-tuple (not to be confused with the $0$-fold
+cartesian product) is equal to
+$$() \equiv \texttt{nil}$$
+In particular, a $1$-fold tuple is equal to
+$$(x) \equiv (x,\texttt{nil})$$
+
+With these definition made, we have operators $\car$ and
+$\cdr$ operating on sets, whose values on pairs are defined to be
+$$\car((x,y)) = x,\quad \cdr((x,y)) = y$$
+In particular, we get
+$$\car(\cdr((x,y,z)) = y,\quad \car(\cdr(\cdr((x,y,z))))) = z$$
 
 Let us now consider the set $\mathcal{T}$ of terms in the sublanguage of
 boolean expressions, and let us define the set of potential reduction expressions
@@ -104,18 +138,166 @@ $$d = (r, e, d_1, \ldots, d_1)$$
 
 where $r \in \{ \texttt{E-IfTrue}, \texttt{E-IfFalse}, \texttt{E-If}\}$ is
 a derivation rule, $e$ is a reduction expression, and $d_1$, \ldots, $d_n$
-are derivations which derive reduction expressions $e_1$, \ldots, $e_n$, such
-that
-
-$$(r, e, e_1, \ldots, e_n)$$
-
-is a *one-step derivation*^[The $e_i$ are the premises of the rule, and
-$e$ is its conclusion.] in the sense of the following definition:
+are derivations which derive reduction expressions $e_1$, \ldots, $e_n$.
 
 \begin{defn}
-The set of \textbf{one-step derivations} $\mathcal{D}_1$ is given by
-\begin{align*} \mathcal{D}_1 & = \{ (\texttt{E-IfTrue},\ \texttt{if true then }t_1\texttt{ else }t_2\rightarrow t_1)\ :\ t_1, t_2 \in \mathcal{T} \} \\
-& \cup \{ (\texttt{E-IfFalse},\ \texttt{if false then }t_1\texttt{ else }t_2\rightarrow t_2)\ :\ t_1, t_2 \in \mathcal{T} \} \\
-& \cup \{ (\texttt{E-If},\ \texttt{if }t\texttt{ then }t_1\texttt{ else }t_2\rightarrow \texttt{if }t'\texttt{ then }t_1\texttt{ else }t_2,\ t\rightarrow t')\ :\ t,t',t_1,t_2 \in \mathcal{T} \}
-\end{align*}
+   The set $\mathcal{D}$ of derivations (of reduction expressions) is the
+   smallest set such that it contains
+   \begin{itemize}
+   \item $(\texttt{E-IfTrue}, \texttt{if true then }t_1\texttt{ else
+   }t_2\rightarrow t_1)$
+   \end{itemize}
+   and
+   \begin{itemize}
+   \item $(\texttt{E-IfFalse}, \texttt{if false then }t_1\texttt{ else
+   }t_2\rightarrow t_2)$
+   \end{itemize}
+   for all $t_1, t_2 \in \mathcal{T}$, and
+   \begin{itemize}
+   \item $(\texttt{E-If}, \texttt{if }t\texttt{ then }t_1\texttt{ else
+   }t_2\rightarrow\texttt{if }t'\texttt{ then }t_1\texttt{ else }t_2,d)$
+   \end{itemize}
+   for all $t,t',t_1, t_2 \in \mathcal{T}$ and all $d \in \mathcal{D}$ for which
+   $$\texttt{car}(\texttt{cdr}(d)) = t\rightarrow t'.$$
 \end{defn}
+
+\begin{rmk}
+Note that it follows immediately from the definition that every element of
+$\mathcal{D}$ has the form
+$$(r,e,d_1,\ldots d_n)$$
+where $r \in \{\texttt{E-IfTrue}, \texttt{E-IfFalse}, \texttt{E-If}\}$ and $e
+\in \mathcal{RDE}$. The element $e$ is to be interpreted as the \textit{conclusion} of
+the derivation and the $d_i$ as the \textit{premises} (or
+\textit{subderivations}). In particular, the elements where $n = 0$ correspond
+to the axioms.
+\end{rmk}
+
+We can now endow $\mathcal{D}$ with a well-founded partial order relation:
+
+\begin{defn}
+Given $d, d' \in \mathcal{D}$, we put
+$$d' \prec d \quad \Leftrightarrow\quad \exists d_1,\ldots,d_n \in \mathcal{D},\ 1 \leq i \leq n\ \ d = (r,e,d_1,\ldots,d_n),\ d' = d_i$$
+and when $d' \prec d$, we say $d'$ is an \textbf{immediate subderivation} of
+$d$.
+
+Moreover, we define the relation $<$ to be the transitive hull of $\prec$,
+and when $d' < d$ we say that $d'$ is a \textbf{subderivation} of $d$.
+\end{defn}
+
+\begin{rmk}
+Note that in the above definition of $\prec$, the number $n$ and the elements
+$r,e,d_1,\ldots,d_n$ are uniquely determined by $d$ and the relation $d
+= (r,e,d_1,\ldots,d_n)$.
+
+This is not completely obvious, because a priori we
+could expand an expression like $(r,e,d)$ further into $(r,e,d_1,\ldots,d_n)$
+if $d$ would expand like $d = (d_1,\ldots,d_n)$. However, for $d \in
+   \mathcal{D}$ we always have $\car(d) \in
+   \{\texttt{E-IfTrue},\texttt{E-IfFalse},\texttt{E-If}\}$, and the latter set
+   is disjoint from $\mathcal{D}$ (because ...?).
+\end{rmk}
+
+\begin{lemma}
+The relations $<$ and $\prec$ are well-founded.
+\end{lemma}
+\begin{proof}
+Note that we eventually want to show that $<$ is a partial order (i.e. antisymmetric and irreflexive), but we won't use this in this proof (in fact, we want to deduce these properties using the well-foundedness).
+
+What we need to show that is that every \textit{non-empty} subset of $\mathcal{D}$ has a least element
+in the order $<$, or equivalently, that there cannot be a strictly descending
+infinite chain
+$$ \ldots < d_2 < d_1 < d_0$$
+This is of course equivalent to showing that there is no infinite descending
+chain
+$$ \ldots \prec d_2 \prec d_1 \prec d_0$$
+(since $<$ was defined to be the transitive hull of $\prec$). But, to see that
+such an infinite descending chain cannot exist it suffcies to remark that if
+$d' \prec d$, then
+$$\texttt{length}(\car(\cdr(d)) \geq \max_{i=1,\ldots,n}
+\ \texttt{length}(\car(\cdr(d'_i))) + 1$$
+where $d' = (r,e,d'_1,\ldots,d'_n)$ and $\texttt{length}(l)$ denotes the lenght
+of a string $l$.
+\end{proof}
+
+We can now finally formulate an induction principle for $\mathcal{D}$.
+
+\begin{thm}
+Let $P$ be a predicate defined at least on elements $d \in \mathcal{D}$. If
+$$d = (r,e,d_1,\ldots,d_n) \in \mathcal{D},\ \forall i\ P(d_i) \quad
+\Rightarrow \quad P(d)$$
+for all $d \in \mathcal{D}$, then $P(d)$ for all $d \in \mathcal{D}$.
+\end{thm}
+\begin{proof}
+Consider the subset
+$$\Omega = \{ d \in \mathcal{D}\ :\ \neg P(p) \}$$
+If this was non-empty, there'd be a minimal element $d$ for the relation
+$\prec$. Writing $d = (e,r,d_1,\ldots,d_n)$, it would follow that $P(d_i)$ for
+all $i$ (since $d_i \prec d$). Thus it would follow that $P(d)$ by assumption,
+contradicting that $\neg P(d)$.
+\end{proof}
+
+From this we can also easily derive a principle for inductive definitions
+
+\begin{thm}
+Let $Y$ be a set and for every $r \in \{\texttt{E-IfTrue},\texttt{E-IfFalse},\texttt{E-If}\}$ let
+$g_r: \mathcal{RDE} \times Y^{n(r)} \rightarrow Y$ be a function, where $n(r)$ equals
+the ``arity'' of $r$ (i.e. $n = 0$ unless $e = \texttt{E-If}$, where $n = n1$).
+
+Then there exists a unique function $f: \mathcal{D} \longrightarrow Y$ such
+that for $d = (r,e,d_1,\ldots,d_n) \in \mathcal{D}$ we have
+$$f(d) = g_r(e,f(d_1), \ldots, f(d_n))$$
+\end{thm}
+\begin{proof}
+Uniqueness follows quite easily by taking two function $f,f'$ and considering
+the set
+$$\Omega = \{ d \in \mathcal{D}\ :\ f(d) \neq f'(d)\}$$
+where they disagree. Existence follows from a similar argument by considering
+\textit{partially} defined functions satisfying the desired equations and by
+first showing (by the same argument) that they must agree on the intersection of
+their domains of definition, then showing that every $d \in D$ occurs in the
+domain of definition of some such partially defined function, and then defining
+$f$ to be the union of all these partially defined functions.
+
+The only nontrivial part of this argument is showing that each $d \in
+\mathcal{D}$ occurs in the domain of definition of such a function. Assuming
+that's not the case would mean assuming the set
+$$\Omega' = \{ d \in \mathcal{D}\ :\ \text{$d$ does not occur in the d.o.d. of
+some $f$}\}$$
+is non-empty. But then it would contain an element $d$ minimal with respect to
+$\prec$, and writing $d = (r,e,d_1,\ldots,d_n)$, we could (by assumption) find
+functions $f_1,\ldots,f_n$ having $d_1,\ldots,d_n$ in their domain of definition
+(respectively), so we can find a function $f$ having all the $d_i$ in its
+domain of definition, and we are then reduced to showing that
+$$f' := f \cup \{(d, g(e,f(d_1),\ldots,f(d_n)))\}$$
+defines a partially defined function on $\mathcal{D}$ having values in $Y$ and
+satisfying the required equation. But that's easy to see (but lengthy to spell
+out), and so we are done.
+\end{proof}
+
+Note that even though the argument of the above proof seems sort-of vacuous, it
+really isn't since we are at least showing that the minimal elements of
+$\mathcal{D}$ (i.e. the axioms) are in the domain of definition of some
+partially defined function.
+
+Using inductive construction, we can now define the depth of a derivation:
+
+\begin{defn}
+The depth $\texttt{depth}(d)$ of a derivation $d \in \mathcal{D}$ is defined
+inductively by
+$$\texttt{depth}(d) = 1 + \max_{i=1,\ldots,n}\ \texttt{depth}(d_i)$$
+where $d = (r,e,d_1,\ldots,d_n)$.
+\end{defn}
+
+\begin{lemma}
+If $d' < d$, then
+$$\texttt{depth}(d') < \texttt{depth}(d)$$
+\end{lemma}
+\begin{proof}
+It suffices to show this for $\prec$ instead of $<$, and for $\prec$ it follows
+immediately from the definition.
+\end{proof}
+
+\begin{cor}
+The relation $<$ is antisymmetric and irreflexive.
+\end{cor}
+\hfill\qedsymbol

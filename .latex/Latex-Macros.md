@@ -1,11 +1,16 @@
 ---
 header-includes:
-- \usepackage{amsthm}
+- \usepackage{amsmath,amsthm}
 - \usepackage[sans]{dsfont}
-- \newtheorem{lemma}{Lemma}
-- \newtheorem{thm}{Theorem}
-- \newtheorem{defn}{Definition}
-- \newtheorem{cor}{Corollary}
+- \theoremstyle{definition}
+- \newcommand\noop[1]{#1}
+- \noop{\newtheorem{thm}{Theorem}}
+- \noop{\newtheorem{lemma}[thm]{Lemma}}
+- \noop{\newtheorem{defn}[thm]{Definition}}
+- \noop{\newtheorem{rmk}[thm]{Remark}}
+- \noop{\newtheorem{cor}[thm]{Corollary}}
 - \newcommand{\bbf}[1]{\mathds{#1}}
 - \newcommand{\N}{\bbf{N}}
+- \newcommand{\car}{\texttt{car}}
+- \newcommand{\cdr}{\texttt{cdr}}
 ---
