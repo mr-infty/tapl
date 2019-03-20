@@ -2,6 +2,8 @@
 header-includes:
 - \usepackage{amssymb,amsthm}
 - \usepackage[sans]{dsfont}
+- \usepackage{mathpartir}
+- \usepackage[all,cmtip]{xy}
 - \theoremstyle{definition}
 - \newcommand\noop[1]{#1}
 - \noop{\newtheorem{thm}{Theorem}}
