@@ -56,10 +56,13 @@ namespace IsNumValue
 |||
 ||| Explicitly, an inhabitant of `EvalsTo t1 t2` is a proof that `t1` evaluates to `t2` in one step.
 data EvalsTo : Term -> Term -> Type where
+  EIfTrue : EvalsTo (IfThenElse True t2 t3) t2
+  EIfFalse : EvalsTo (IfThenElse False t2 t3) t3
+  EIf : EvalsTo t1 t1' -> EvalsTo (IfThenElse t1 t2 t3) (IfThenElse t1' t2 t3)
   ESucc : EvalsTo t1 t2 -> EvalsTo (Succ t1) (Succ t2)
   EPredZero : EvalsTo (Pred Zero) Zero
   EPredSucc : {pf : IsNumValue nv1} -> EvalsTo (Pred (Succ nv1)) nv1
-  EPred : EvalsTo t1 t1 -> EvalsTo (Pred t1) (Pred t2)
+  EPred : EvalsTo t1 t2 -> EvalsTo (Pred t1) (Pred t2)
   EIsZeroZero : EvalsTo (IsZero Zero) Zero
   EIsZeroSucc : {pf : IsNumValue nv1} -> EvalsTo (IsZero (Succ nv1)) False
   EIsZero : EvalsTo t1 t2 -> EvalsTo (IsZero t1) (IsZero t2)
@@ -119,27 +122,7 @@ data BigEvalsTo : Term -> Term -> Type where
 ----------------------------
 -- TODO: Move this into extra file!
 
-lemma1 : {pf : IsValue v} -> EvalsTo t1 t2 -> BigEvalsTo t2 v -> BigEvalsTo t1 v
-lemma1 {pf} (ESucc x) y = ?lemma1_rhs_1
-lemma1 {pf} EPredZero y = ?lemma1_rhs_2
-lemma1 {pf} EPredSucc y = ?lemma1_rhs_3
-lemma1 {pf} (EPred x) y = ?lemma1_rhs_4
-lemma1 {pf} EIsZeroZero y = ?lemma1_rhs_5
-lemma1 {pf} EIsZeroSucc y = ?lemma1_rhs_6
-lemma1 {pf} (EIsZero x) y = ?lemma1_rhs_7
-
-starImpliesBig_ind_step : (pf : IsValue v) -> (x : EvalsTo t t') -> (y : BigEvalsTo t' v) -> BigEvalsTo t v
-starImpliesBig_ind_step pf (ESucc x) y = ?starImpliesBig_ind_step_rhs_1
-starImpliesBig_ind_step pf EPredZero y = ?starImpliesBig_ind_step_rhs_2
-starImpliesBig_ind_step pf EPredSucc y = ?starImpliesBig_ind_step_rhs_3
-starImpliesBig_ind_step pf (EPred x) y = ?starImpliesBig_ind_step_rhs_4
-starImpliesBig_ind_step pf EIsZeroZero y = ?starImpliesBig_ind_step_rhs_5
-starImpliesBig_ind_step pf EIsZeroSucc y = ?starImpliesBig_ind_step_rhs_6
-starImpliesBig_ind_step pf (EIsZero x) y = ?starImpliesBig_ind_step_rhs_7
-
 starImpliesBig : {pf : IsValue v} -> EvalsToStar t v -> BigEvalsTo t v
-starImpliesBig {pf} Refl = BValue {pf=pf}
-starImpliesBig {pf} (Cons x y) = starImpliesBig_ind_step pf x (starImpliesBig {pf=pf} y)
 
 bigImpliesStar : {pf : IsValue v} -> BigEvalsTo t v -> EvalsToStar t v
 
