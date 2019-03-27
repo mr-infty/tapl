@@ -76,6 +76,27 @@ namespace ReflSymmClos
     Refl : ReflSymmClos rel x x
     --Snoc : ReflSymmClos rel t t' -> (rel t' t'') -> ReflSymmClos rel t t''
     Cons : (rel t t') -> ReflSymmClos rel t' t'' -> ReflSymmClos rel t t''
+ 
+  ||| Appends two (appendable) elements of the reflexive-transitive closure of `rel` together,
+  ||| thus realizing the transitivity of said closure
+  (++) : ReflSymmClos rel t t' ->
+         ReflSymmClos rel t' t'' ->
+         ReflSymmClos rel t t''
+  (++) Refl y = y
+  (++) (Cons x z) y = Cons x (z ++ y)
+
+  ||| Given `rel t1 t2`, returns the associated relation in the reflexive transitive closure,
+  ||| thus realizing the "closure part" of said closure
+  weaken : rel t1 t2 -> ReflSymmClos rel t1 t2
+  weaken x = Cons x Refl
+
+  ||| Given a function `f` defined on relations of type `rel`, applies that to a relation in the
+  ||| reflexive-transitive closure of `rel`
+  map : {func : ty -> ty} -> (f : {t1 : ty} -> {t2 : ty} -> rel t1 t2 -> rel (func t1) (func t2)) ->
+        (ReflSymmClos rel t1 t2) ->
+        (ReflSymmClos rel (func t1) (func t2))
+  map {func} f Refl = Refl
+  map {func} f (Cons x y) = Cons (f x) (map f y)
 
 ||| Propositional type describing that the first term evaluates to the second in a finite number of steps
 |||
@@ -95,11 +116,11 @@ EvalsToStar = ReflSymmClos EvalsTo
 data BigEvalsTo : Term -> Term -> Type where
   BValue : {pf : IsValue v} -> BigEvalsTo v v
   BIfTrue : {pf : IsValue v2} ->
-            BigEvalsTo t1 true ->
+            BigEvalsTo t1 True ->
             BigEvalsTo t2 v2 -> 
             BigEvalsTo (IfThenElse t1 t2 t3) v2
   BIfFalse : {pf : IsValue v3} ->
-             BigEvalsTo t1 false ->
+             BigEvalsTo t1 False ->
              BigEvalsTo t3 v3 -> 
              BigEvalsTo (IfThenElse t1 t2 t3) v3
   BSucc : {pf : IsNumValue nv1} ->
@@ -121,6 +142,47 @@ data BigEvalsTo : Term -> Term -> Type where
 -- Exercise 3.5.17
 ----------------------------
 -- TODO: Move this into extra file!
+
+||| Big step evaluation rules expressed in terms of reflexive-transitive closure
+||| of small-step evaluation rules
+data BInE : Term -> Term -> Type where
+  BInEValue : {pf : IsValue v} -> BInE v v
+  BInEIfTrue : {pf : IsValue v2} ->
+               EvalsToStar t1 True ->
+               EvalsToStar t2 v2 ->
+               BInE (IfThenElse t1 t2 t3) v2
+  BInEIfFalse : {pf : IsValue v3} ->
+                EvalsToStar t1 False ->
+                EvalsToStar t3 v3 ->
+                BInE (IfThenElse t1 t2 t3) v3
+  BInESucc : {pf : IsNumValue nv1} ->
+             EvalsToStar t1 nv1 ->
+             BInE (Succ t1) (Succ nv1)
+  BInEPredZero : EvalsToStar t1 Zero ->
+                 BInE (Pred t1) Zero
+  BInEPredSucc : {pf : IsNumValue nv1} ->
+                 EvalsToStar t1 (Succ nv1) ->
+                 BInE (Pred t1) nv1
+  BInEIsZeroZero : EvalsToStar t1 Zero ->
+                   BInE (IsZero t1) True
+  BInEIsZeroSucc : {pf : IsNumValue nv1} ->
+                   EvalsToStar t1 (Succ nv1) ->
+                   BInE (IsZero t1) False
+
+from_BInE_to_E : BInE t v -> EvalsToStar t v
+from_BInE_to_E BInEValue = Refl
+from_BInE_to_E (BInEIfTrue {t2} {t3} x y) = map {func=(\t => IfThenElse t t2 t3)} EIf x
+                                            ++ Cons EIfTrue y
+from_BInE_to_E (BInEIfFalse {t2} {t3} x y) = map {func=(\t => IfThenElse t t2 t3)} EIf x
+                                            ++ Cons EIfFalse y
+from_BInE_to_E (BInESucc x) = map {func=Succ} ESucc x
+from_BInE_to_E (BInEPredZero x) = ?from_BInE_to_E_rhs_5
+from_BInE_to_E (BInEPredSucc x) = ?from_BInE_to_E_rhs_6
+from_BInE_to_E (BInEIsZeroZero x) = ?from_BInE_to_E_rhs_7
+from_BInE_to_E (BInEIsZeroSucc x) = ?from_BInE_to_E_rhs_8
+
+from_E_to_BInE : {pf : IsValue v} ->
+                 (d : EvalsToStar t v) -> (r : BInE t v ** d = from_BInE_to_E r)
 
 starImpliesBig : {pf : IsValue v} -> EvalsToStar t v -> BigEvalsTo t v
 
