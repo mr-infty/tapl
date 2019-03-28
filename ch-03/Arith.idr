@@ -41,7 +41,7 @@ v2t (Right nv) = nv2t nv
 namespace IsValue
   ||| Propositional type describing that a term "is" indeed a value
   data IsValue : Term -> Type where
-    ConvertedFrom : (v : Value) -> IsValue (v2t nv)
+    ConvertedFrom : (v : Value) -> IsValue (v2t v)
 
 namespace IsNumValue
   ||| Propositional type describing that a term "is" indeed a numeric value
@@ -63,7 +63,7 @@ data EvalsTo : Term -> Term -> Type where
   EPredZero : EvalsTo (Pred Zero) Zero
   EPredSucc : {pf : IsNumValue nv1} -> EvalsTo (Pred (Succ nv1)) nv1
   EPred : EvalsTo t1 t2 -> EvalsTo (Pred t1) (Pred t2)
-  EIsZeroZero : EvalsTo (IsZero Zero) Zero
+  EIsZeroZero : EvalsTo (IsZero Zero) True
   EIsZeroSucc : {pf : IsNumValue nv1} -> EvalsTo (IsZero (Succ nv1)) False
   EIsZero : EvalsTo t1 t2 -> EvalsTo (IsZero t1) (IsZero t2)
 
@@ -175,14 +175,66 @@ from_BInE_to_E (BInEIfTrue {t2} {t3} x y) = map {func=(\t => IfThenElse t t2 t3)
                                             ++ Cons EIfTrue y
 from_BInE_to_E (BInEIfFalse {t2} {t3} x y) = map {func=(\t => IfThenElse t t2 t3)} EIf x
                                             ++ Cons EIfFalse y
-from_BInE_to_E (BInESucc x) = map {func=Succ} ESucc x
-from_BInE_to_E (BInEPredZero x) = ?from_BInE_to_E_rhs_5
-from_BInE_to_E (BInEPredSucc x) = ?from_BInE_to_E_rhs_6
-from_BInE_to_E (BInEIsZeroZero x) = ?from_BInE_to_E_rhs_7
-from_BInE_to_E (BInEIsZeroSucc x) = ?from_BInE_to_E_rhs_8
+from_BInE_to_E (BInESucc x) = map ESucc x
+from_BInE_to_E (BInEPredZero x) = map EPred x ++ weaken EPredZero
+from_BInE_to_E (BInEPredSucc {pf} x) = map EPred x ++ weaken (EPredSucc {pf=pf})
+from_BInE_to_E (BInEIsZeroZero x) = map EIsZero x ++ weaken EIsZeroZero
+from_BInE_to_E (BInEIsZeroSucc {pf} x) = map EIsZero x ++ weaken (EIsZeroSucc {pf=pf})
+
+_valuesAreNormal : {pf : IsValue v} -> EvalsTo v t -> Void
+_valuesAreNormal {pf = (ConvertedFrom (Left bv))} {v = (bv2t bv)} x = case bv of
+                                                                          True => (case x of
+                                                                                        EIfTrue impossible
+                                                                                        EIfFalse impossible
+                                                                                        (EIf _) impossible
+                                                                                        (ESucc _) impossible
+                                                                                        EPredZero impossible
+                                                                                        EPredSucc impossible
+                                                                                        (EPred _) impossible
+                                                                                        EIsZeroZero impossible
+                                                                                        EIsZeroSucc impossible
+                                                                                        (EIsZero _) impossible)
+                                                                          False => (case x of
+                                                                                         EIfTrue impossible
+                                                                                         EIfFalse impossible
+                                                                                         (EIf _) impossible
+                                                                                         (ESucc _) impossible
+                                                                                         EPredZero impossible
+                                                                                         EPredSucc impossible
+                                                                                         (EPred _) impossible
+                                                                                         EIsZeroZero impossible
+                                                                                         EIsZeroSucc impossible
+                                                                                         (EIsZero _) impossible)
+_valuesAreNormal {pf = (ConvertedFrom (Right nv))} {v = (nv2t nv)} x = case nv of
+                                                                           Zero => (case x of
+                                                                                         EIfTrue impossible
+                                                                                         EIfFalse impossible
+                                                                                         (EIf _) impossible
+                                                                                         (ESucc _) impossible
+                                                                                         EPredZero impossible
+                                                                                         EPredSucc impossible
+                                                                                         (EPred _) impossible
+                                                                                         EIsZeroZero impossible
+                                                                                         EIsZeroSucc impossible
+                                                                                         (EIsZero _) impossible)
+                                                                           (Succ nv) => (case x of
+                                                                                              (ESucc y) => _valuesAreNormal {pf=ConvertedFrom (Right nv)} y)
+
+valuesAreNormal : {pf : IsValue v} -> (r : EvalsToStar v t) -> (r = (Refl {rel=EvalsTo} {x=v}))
+valuesAreNormal (Refl {x}) = Refl
+valuesAreNormal {pf} (Cons x y) with (_valuesAreNormal {pf=pf} x)
+  valuesAreNormal {pf} (Cons x y) | with_pat impossible
 
 from_E_to_BInE : {pf : IsValue v} ->
                  (d : EvalsToStar t v) -> (r : BInE t v ** d = from_BInE_to_E r)
+from_E_to_BInE {pf} {t = True} d with (valuesAreNormal {pf=ConvertedFrom (Left True)} d)
+  from_E_to_BInE {pf} {t = True} d | with_pat = ?from_E_to_BInE_rhs
+from_E_to_BInE {pf} {t = False} d = ?from_E_to_BInE_rhs_3
+from_E_to_BInE {pf} {t = (IfThenElse x y z)} d = ?from_E_to_BInE_rhs_4
+from_E_to_BInE {pf} {t = Zero} d = ?from_E_to_BInE_rhs_5
+from_E_to_BInE {pf} {t = (Succ x)} d = ?from_E_to_BInE_rhs_6
+from_E_to_BInE {pf} {t = (Pred x)} d = ?from_E_to_BInE_rhs_7
+from_E_to_BInE {pf} {t = (IsZero x)} d = ?from_E_to_BInE_rhs_8
 
 starImpliesBig : {pf : IsValue v} -> EvalsToStar t v -> BigEvalsTo t v
 
