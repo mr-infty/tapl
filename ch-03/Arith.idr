@@ -225,6 +225,52 @@ valuesAreNormal (Refl {x}) = Refl
 valuesAreNormal {pf} (Cons x y) with (valuesDontEvaluate {pf=pf} x)
   valuesAreNormal {pf} (Cons x y) | with_pat impossible
 
+valueIsEither : (v : Term) -> {pf : IsValue v} -> Either (v = True) (Either (v = False) (Either (v = Zero) (nv : Term ** ((v = Succ nv), IsNumValue nv))))
+valueIsEither (bv2t x) {pf = (ConvertedFrom (Left x))} = case x of
+                                                              True => Left Refl
+                                                              False => Right (Left Refl)
+valueIsEither (nv2t x) {pf = (ConvertedFrom (Right x))} = case x of
+                                                               Zero => Right (Right (Left Refl))
+                                                               (Succ y) => Right (Right (Right (nv2t y ** (Refl, ConvertedFrom y))))
+
+valuesAreNormal' : {pf : IsValue v} ->
+                   EvalsToStar v t ->
+                   (t = v)
+valuesAreNormal' {pf} x with (valuesAreNormal {pf=pf} x)
+  valuesAreNormal' {pf} x | with_pat = case with_pat of
+                                            Refl => Refl
+
+ifThenElseNotNormal : (pf : IsValue (IfThenElse x y z)) -> Void
+ifThenElseNotNormal {x} {y} {z} pf with (valueIsEither (IfThenElse x y z) {pf=pf})
+  ifThenElseNotNormal {x} {y} {z} pf | (Left l) = case l of
+                                                       Refl impossible
+  ifThenElseNotNormal {x} {y} {z} pf | (Right (Left l)) = case l of
+                                                               Refl impossible
+  ifThenElseNotNormal {x} {y} {z} pf | (Right (Right (Left l))) = case l of
+                                                                       Refl impossible
+  ifThenElseNotNormal {x} {y} {z} pf | (Right (Right (Right (nv ** (pf1, pf2))))) = case pf1 of
+                                                                                         Refl impossible
+
+lemma_EIfTrue : {pf : IsValue v} ->
+                (d' : EvalsToStar t2 v) ->
+                (r : BInE (IfThenElse True t2 t3) v ** Cons EIfTrue d' = from_BInE_to_E r)
+lemma_EIfTrue {pf} d' = (BInEIfTrue {pf=pf} Refl d' ** Refl)
+
+lemma_EIfFalse : {pf : IsValue v} ->
+                 (d' : EvalsToStar t3 v) ->
+                 (r : BInE (IfThenElse False t2 t3) v ** Cons EIfFalse d' = from_BInE_to_E r)
+lemma_EIfFalse {pf} d' = (BInEIfFalse {pf=pf} Refl d' ** Refl)
+
+lemma_EIf : {pf : IsValue v} ->
+            {x : EvalsTo t1 t1'} ->
+            (d' : EvalsToStar (IfThenElse t1' t2 t3) v) ->
+            (r' : BInE (IfThenElse t1' t2 t3) v ** d' = from_BInE_to_E r') ->
+            (r : BInE (IfThenElse t1 t2 t3) v ** Cons (EIf x) d' = from_BInE_to_E r)
+lemma_EIf {pf} {x} d' (r' ** pf') = case r' of
+                                         BInEValue {pf} => absurd (ifThenElseNotNormal pf)
+                                         BInEIfTrue d1 d2 => (BInEIfTrue {pf=pf} (Cons x d1) d2 ** cong pf')
+                                         BInEIfFalse d1 d2 => (BInEIfFalse {pf=pf} (Cons x d1) d2 ** cong pf')
+
 from_E_to_BInE : {pf : IsValue v} ->
                  (d : EvalsToStar t v) -> (r : BInE t v ** d = from_BInE_to_E r)
 from_E_to_BInE {pf} {t = True} Refl = (BInEValue {pf=ConvertedFrom (Left True)} {v=True} ** Refl)
@@ -233,8 +279,16 @@ from_E_to_BInE {pf} {t = True} (Cons x y) with (valuesDontEvaluate {pf=Converted
 from_E_to_BInE {pf} {t = False} Refl = (BInEValue {pf=ConvertedFrom (Left False)} {v=False} ** Refl)
 from_E_to_BInE {pf} {t = False} (Cons x y) with (valuesDontEvaluate {pf=ConvertedFrom (Left False)} x)
   from_E_to_BInE {pf} {t = False} (Cons x y) | with_pat impossible
-from_E_to_BInE {pf} {t = (IfThenElse x y z)} d = ?from_E_to_BInE_rhs_4
-from_E_to_BInE {pf} {t = Zero} d = ?from_E_to_BInE_rhs_5
+from_E_to_BInE {pf} {t = (IfThenElse x y z)} Refl with (ifThenElseNotNormal pf)
+  from_E_to_BInE {pf} {t = (IfThenElse x y z)} Refl | with_pat impossible
+from_E_to_BInE {pf} {t = (IfThenElse x y z)} (Cons w s) = case w of
+                                                               EIfTrue => lemma_EIfTrue {pf=pf} s
+                                                               EIfFalse => lemma_EIfFalse {pf=pf} s
+                                                               (EIf r) => lemma_EIf {pf=pf} s (from_E_to_BInE {pf=pf} s)
+from_E_to_BInE {pf} {t = Zero} d = case valuesAreNormal' {pf=ConvertedFrom (Right Zero)} d of
+                                        Refl => case d of
+                                                     Refl => (BInEValue {pf=ConvertedFrom (Right Zero)} ** Refl)
+                                                     (Cons x y) => absurd (valuesDontEvaluate {pf=ConvertedFrom (Right Zero)} x)
 from_E_to_BInE {pf} {t = (Succ x)} d = ?from_E_to_BInE_rhs_6
 from_E_to_BInE {pf} {t = (Pred x)} d = ?from_E_to_BInE_rhs_7
 from_E_to_BInE {pf} {t = (IsZero x)} d = ?from_E_to_BInE_rhs_8
