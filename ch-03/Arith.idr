@@ -137,10 +137,9 @@ data BigEvalsTo : Term -> Term -> Type where
                 BigEvalsTo t1 (Succ nv1) ->
                 BigEvalsTo (IsZero t1) False
 
-
-----------------------------
+--------------------------------------------------------------------------------
 -- Exercise 3.5.17
-----------------------------
+--------------------------------------------------------------------------------
 -- TODO: Move this into extra file!
 
 ||| Big step evaluation rules expressed in terms of reflexive-transitive closure
@@ -169,6 +168,8 @@ data BInE : Term -> Term -> Type where
                    EvalsToStar t1 (Succ nv1) ->
                    BInE (IsZero t1) False
 
+||| Given a (one-step) derivation in the `BInE`-calculus, computes its corresponding derivation
+||| in the `E`-calculus.
 from_BInE_to_E : BInE t v -> EvalsToStar t v
 from_BInE_to_E BInEValue = Refl
 from_BInE_to_E (BInEIfTrue {t2} {t3} x y) = map {func=(\t => IfThenElse t t2 t3)} EIf x
@@ -181,6 +182,11 @@ from_BInE_to_E (BInEPredSucc {pf} x) = map EPred x ++ weaken (EPredSucc {pf=pf})
 from_BInE_to_E (BInEIsZeroZero x) = map EIsZero x ++ weaken EIsZeroZero
 from_BInE_to_E (BInEIsZeroSucc {pf} x) = map EIsZero x ++ weaken (EIsZeroSucc {pf=pf})
 
+--------------------------------------------------------------------------------
+-- Auxillary lemmas about evaluation and values
+--------------------------------------------------------------------------------
+
+||| Proof that values don't evaluate to anything in the `E`-calculus.
 valuesDontEvaluate : {pf : IsValue v} -> EvalsTo v t -> Void
 valuesDontEvaluate {pf = (ConvertedFrom (Left bv))} {v = (bv2t bv)} x = case bv of
                                                                              True => (case x of
@@ -220,11 +226,19 @@ valuesDontEvaluate {pf = (ConvertedFrom (Right nv))} {v = (nv2t nv)} x = case nv
                                                                               (Succ nv) => (case x of
                                                                                                  (ESucc y) => valuesDontEvaluate {pf=ConvertedFrom (Right nv)} y)
 
+||| Proof that the only derivation of a value term in the reflexive transitive of the `E`-evaluation rules
+||| is the trivial derivation.
 valuesAreNormal : {pf : IsValue v} -> (r : EvalsToStar v t) -> (r = (Refl {rel=EvalsTo} {x=v}))
 valuesAreNormal (Refl {x}) = Refl
 valuesAreNormal {pf} (Cons x y) with (valuesDontEvaluate {pf=pf} x)
   valuesAreNormal {pf} (Cons x y) | with_pat impossible
 
+||| Proof that a value is either
+|||
+|||     1. `True`
+|||     2. `False`
+|||     3. `Zero`
+|||     4. `Succ nv`, with `nv` a numeric value
 valueIsEither : (v : Term) -> {pf : IsValue v} -> Either (v = True) (Either (v = False) (Either (v = Zero) (nv : Term ** ((v = Succ nv), IsNumValue nv))))
 valueIsEither (bv2t x) {pf = (ConvertedFrom (Left x))} = case x of
                                                               True => Left Refl
@@ -233,6 +247,23 @@ valueIsEither (nv2t x) {pf = (ConvertedFrom (Right x))} = case x of
                                                                Zero => Right (Right (Left Refl))
                                                                (Succ y) => Right (Right (Right (nv2t y ** (Refl, ConvertedFrom y))))
 
+||| Proof that a term of the form `Succ t` is only a value if `t` is a numeric value.
+succIsValueIf : (pf : IsValue (Succ t)) ->
+                IsNumValue t
+succIsValueIf (ConvertedFrom (Left Values.True)) impossible
+succIsValueIf (ConvertedFrom (Left Values.False)) impossible
+succIsValueIf (ConvertedFrom (Right Values.Zero)) impossible
+succIsValueIf (ConvertedFrom (Right (Succ nv))) = ConvertedFrom nv
+
+||| Proof that a term of the form `Pred t` is never a value.
+predNotValue : (pf : IsValue (Pred t)) -> Void
+predNotValue (ConvertedFrom (Left Values.True)) impossible
+predNotValue (ConvertedFrom (Left Values.False)) impossible
+predNotValue (ConvertedFrom (Right Values.Zero)) impossible
+predNotValue (ConvertedFrom (Right (Values.Succ nv))) impossible
+
+||| Proof that a value only evaluates to itself under the reflexive transitive closure of
+||| the `E`-evaluation rules.
 valuesAreNormal' : {pf : IsValue v} ->
                    EvalsToStar v t ->
                    (t = v)
@@ -240,6 +271,7 @@ valuesAreNormal' {pf} x with (valuesAreNormal {pf=pf} x)
   valuesAreNormal' {pf} x | with_pat = case with_pat of
                                             Refl => Refl
 
+||| Proof that a term of the form `IfThenElse x y z` is never a value.
 ifThenElseNotNormal : (pf : IsValue (IfThenElse x y z)) -> Void
 ifThenElseNotNormal {x} {y} {z} pf with (valueIsEither (IfThenElse x y z) {pf=pf})
   ifThenElseNotNormal {x} {y} {z} pf | (Left l) = case l of
@@ -250,6 +282,10 @@ ifThenElseNotNormal {x} {y} {z} pf with (valueIsEither (IfThenElse x y z) {pf=pf
                                                                        Refl impossible
   ifThenElseNotNormal {x} {y} {z} pf | (Right (Right (Right (nv ** (pf1, pf2))))) = case pf1 of
                                                                                          Refl impossible
+
+--------------------------------------------------------------------------------
+-- Sublemmas of `from_E_to_BInE`
+--------------------------------------------------------------------------------
 
 lemma_EIfTrue : {pf : IsValue v} ->
                 (d' : EvalsToStar t2 v) ->
@@ -271,6 +307,17 @@ lemma_EIf {pf} {x} d' (r' ** pf') = case r' of
                                          BInEIfTrue d1 d2 => (BInEIfTrue {pf=pf} (Cons x d1) d2 ** cong pf')
                                          BInEIfFalse d1 d2 => (BInEIfFalse {pf=pf} (Cons x d1) d2 ** cong pf')
 
+lemma_ESucc : {pf : IsValue v} ->
+              (x : EvalsTo t1 t1') ->
+              (r' : BInE (Succ t1') v ** d' = from_BInE_to_E r') ->
+              (r : BInE (Succ t1) v ** Cons (ESucc x) d' = from_BInE_to_E r)
+lemma_ESucc {pf} x (r' ** pf') = case r' of
+                                      BInEValue => case succIsValueIf pf of
+                                                        nv_pf@(ConvertedFrom nv) => (BInESucc {pf=nv_pf} (weaken x) ** cong pf')
+                                      BInESucc {pf} d'' => (BInESucc {pf=pf} (Cons x d'') ** cong pf')
+
+||| Deconstructs a derivation of a term `t` to a value `v` in the `E`-calculus into a (one-step) derivation
+||| in the `BInE`-calculus.
 from_E_to_BInE : {pf : IsValue v} ->
                  (d : EvalsToStar t v) -> (r : BInE t v ** d = from_BInE_to_E r)
 from_E_to_BInE {pf} {t = True} Refl = (BInEValue {pf=ConvertedFrom (Left True)} {v=True} ** Refl)
@@ -289,12 +336,25 @@ from_E_to_BInE {pf} {t = Zero} d = case valuesAreNormal' {pf=ConvertedFrom (Righ
                                         Refl => case d of
                                                      Refl => (BInEValue {pf=ConvertedFrom (Right Zero)} ** Refl)
                                                      (Cons x y) => absurd (valuesDontEvaluate {pf=ConvertedFrom (Right Zero)} x)
-from_E_to_BInE {pf} {t = (Succ x)} d = ?from_E_to_BInE_rhs_6
-from_E_to_BInE {pf} {t = (Pred x)} d = ?from_E_to_BInE_rhs_7
+from_E_to_BInE {pf} {t = (Succ x)} Refl = case succIsValueIf pf of
+                                               ConvertedFrom nv => (BInEValue {pf=ConvertedFrom (Right (Succ nv))} ** Refl)
+from_E_to_BInE {pf} {t = (Succ x)} (Cons y z) = case y of
+                                                     ESucc y' => lemma_ESucc {pf=pf} y' (from_E_to_BInE {pf=pf} z)
+from_E_to_BInE {pf} {t = (Pred x)} Refl = absurd (predNotValue pf)
+from_E_to_BInE {pf} {t = (Pred x)} (Cons y z) = case y of
+                                                     EPredZero => ?from_E_to_BInE_rhs_1
+                                                     EPredSucc => ?from_E_to_BInE_rhs_3
+                                                     EPred y' => ?from_E_to_BInE_rhs_4
 from_E_to_BInE {pf} {t = (IsZero x)} d = ?from_E_to_BInE_rhs_8
 
+||| Proof that if a term `t` evaluates to a value `v` under the reflexive transitive
+||| closure of the small-step evaluation rules, then it also evaluates to it under the
+||| big-step evaluation rules.
 starImpliesBig : {pf : IsValue v} -> EvalsToStar t v -> BigEvalsTo t v
 
+||| Proof that if a term `t` evaluates to a value `v` under the big-step evaluation rules,
+||| then it also evaluates to it under the reflexive transitive closure of the small-step
+||| rules.
 bigImpliesStar : {pf : IsValue v} -> BigEvalsTo t v -> EvalsToStar t v
 
 ----------------------------
