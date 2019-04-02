@@ -456,7 +456,7 @@ The relation $<$ is antisymmetric and irreflexive.
    \end{proof}
 
    \begin{cor}
-   Property (**NormUnq**) holds in the enlarged system.
+   Property $(\textit{NormUnq})$ holds in the enlarged system.
    \end{cor}
    \begin{proof}
    If $t$ is a term and $u$ is a normal form in the enlarged system such that
@@ -466,3 +466,31 @@ The relation $<$ is antisymmetric and irreflexive.
    (**NormUnq**) holds in the smaller system, it therefore follows that it
    holds for the larger one also.
    \end{proof}
+
+## Exercise 3.5.14
+
+We need to show that property (**DetEval**) also holds for the (one-step)
+evaluation relation $t \rightarrow t'$ for the full language of arithmetic
+expressions. That is, we need to show that
+
+$$t \rightarrow t' \text{ and } t \rightarrow t'' \quad \Rightarrow\quad t' = t''$$
+
+As before, the proof comes down to showing a stronger property, namely that
+given any term `t` there is at most one one-step evaluation rule expression $t
+\rightarrow t'$ beginning with `t`. For example, in the Idris version of the
+arithmetic language I defined this statement would correspond to the following
+type:
+
+    (r : EvalsTo t t') -> (r' : EvalsTo t t'') -> (r = r')
+
+From this one easily that (**DetEval**) holds, which corresponds to the
+following Idris type:
+
+    EvalsTo t t' -> EvalsTo t t'' -> (t' = t'')
+
+A complete formalization of this exercise in Idris can be found in
+`Exercise_3_5_14.idr`. Suffice it to say that the proof of the stronger
+statement comes down to a simple case-distinction. One minor complication in
+the formal proof of this statement is that in order to prove `r' = r''` in
+certain cases, one is forced to reason about *equality of proofs* (more
+specifically, equality between proofs of type `IsNumValue t`).

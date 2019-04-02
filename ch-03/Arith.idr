@@ -138,6 +138,114 @@ data BigEvalsTo : Term -> Term -> Type where
                 BigEvalsTo t1 (Succ nv1) ->
                 BigEvalsTo (IsZero t1) False
 
+--------------------------------------------------------------------------------
+-- Some properties of values and evaluation
+--------------------------------------------------------------------------------
+
+||| A numeric value is also a value
+numValueIsValue : IsNumValue t -> IsValue t
+numValueIsValue {t = (v2t (Right nv))} (ConvertedFrom nv) = IsValue.ConvertedFrom (Right nv)
+
+||| The successor of a numeric value is a numeric value
+succNumValueIsNumValue : IsNumValue t -> IsNumValue (Succ t)
+succNumValueIsNumValue {t = (v2t (Right nv))} (ConvertedFrom nv) = ConvertedFrom (Succ nv)
+
+||| Proof that values don't evaluate to anything in the `E`-calculus.
+valuesDontEvaluate : {pf : IsValue v} -> EvalsTo v t -> Void
+valuesDontEvaluate {pf = (ConvertedFrom (Left bv))} {v = (bv2t bv)} x = case bv of
+                                                                             True => (case x of
+                                                                                           EIfTrue impossible
+                                                                                           EIfFalse impossible
+                                                                                           (EIf _) impossible
+                                                                                           (ESucc _) impossible
+                                                                                           EPredZero impossible
+                                                                                           EPredSucc impossible
+                                                                                           (EPred _) impossible
+                                                                                           EIsZeroZero impossible
+                                                                                           EIsZeroSucc impossible
+                                                                                           (EIsZero _) impossible)
+                                                                             False => (case x of
+                                                                                            EIfTrue impossible
+                                                                                            EIfFalse impossible
+                                                                                            (EIf _) impossible
+                                                                                            (ESucc _) impossible
+                                                                                            EPredZero impossible
+                                                                                            EPredSucc impossible
+                                                                                            (EPred _) impossible
+                                                                                            EIsZeroZero impossible
+                                                                                            EIsZeroSucc impossible
+                                                                                            (EIsZero _) impossible)
+valuesDontEvaluate {pf = (ConvertedFrom (Right nv))} {v = (nv2t nv)} x = case nv of
+                                                                              Zero => (case x of
+                                                                                            EIfTrue impossible
+                                                                                            EIfFalse impossible
+                                                                                            (EIf _) impossible
+                                                                                            (ESucc _) impossible
+                                                                                            EPredZero impossible
+                                                                                            EPredSucc impossible
+                                                                                            (EPred _) impossible
+                                                                                            EIsZeroZero impossible
+                                                                                            EIsZeroSucc impossible
+                                                                                            (EIsZero _) impossible)
+                                                                              (Succ nv) => (case x of
+                                                                                                 (ESucc y) => valuesDontEvaluate {pf=ConvertedFrom (Right nv)} y)
+
+||| Proof that the only derivation of a value term in the reflexive transitive of the `E`-evaluation rules
+||| is the trivial derivation.
+valuesAreNormal : {pf : IsValue v} -> (r : EvalsToStar v t) -> (r = (Refl {rel=EvalsTo} {x=v}))
+valuesAreNormal (Refl {x}) = Refl
+valuesAreNormal {pf} (Cons x y) with (valuesDontEvaluate {pf=pf} x)
+  valuesAreNormal {pf} (Cons x y) | with_pat impossible
+
+||| Proof that a value is either
+|||
+|||     1. `True`
+|||     2. `False`
+|||     3. `Zero`
+|||     4. `Succ nv`, with `nv` a numeric value
+valueIsEither : (v : Term) -> {pf : IsValue v} -> Either (v = True) (Either (v = False) (Either (v = Zero) (nv : Term ** ((v = Succ nv), IsNumValue nv))))
+valueIsEither (bv2t x) {pf = (ConvertedFrom (Left x))} = case x of
+                                                              True => Left Refl
+                                                              False => Right (Left Refl)
+valueIsEither (nv2t x) {pf = (ConvertedFrom (Right x))} = case x of
+                                                               Zero => Right (Right (Left Refl))
+                                                               (Succ y) => Right (Right (Right (nv2t y ** (Refl, ConvertedFrom y))))
+
+||| Proof that a term of the form `Succ t` is only a value if `t` is a numeric value.
+succIsValueIf : (pf : IsValue (Succ t)) ->
+                IsNumValue t
+succIsValueIf (ConvertedFrom (Left Values.True)) impossible
+succIsValueIf (ConvertedFrom (Left Values.False)) impossible
+succIsValueIf (ConvertedFrom (Right Values.Zero)) impossible
+succIsValueIf (ConvertedFrom (Right (Succ nv))) = ConvertedFrom nv
+
+||| Proof that a term of the form `Pred t` is never a value.
+predNotValue : (pf : IsValue (Pred t)) -> Void
+predNotValue (ConvertedFrom (Left Values.True)) impossible
+predNotValue (ConvertedFrom (Left Values.False)) impossible
+predNotValue (ConvertedFrom (Right Values.Zero)) impossible
+predNotValue (ConvertedFrom (Right (Values.Succ nv))) impossible
+
+||| Proof that a value only evaluates to itself under the reflexive transitive closure of
+||| the `E`-evaluation rules.
+valuesAreNormal' : {pf : IsValue v} ->
+                   EvalsToStar v t ->
+                   (t = v)
+valuesAreNormal' {pf} x with (valuesAreNormal {pf=pf} x)
+  valuesAreNormal' {pf} x | with_pat = case with_pat of
+                                            Refl => Refl
+
+||| Proof that a term of the form `IfThenElse x y z` is never a value.
+ifThenElseNotNormal : (pf : IsValue (IfThenElse x y z)) -> Void
+ifThenElseNotNormal {x} {y} {z} pf with (valueIsEither (IfThenElse x y z) {pf=pf})
+  ifThenElseNotNormal {x} {y} {z} pf | (Left l) = case l of
+                                                       Refl impossible
+  ifThenElseNotNormal {x} {y} {z} pf | (Right (Left l)) = case l of
+                                                               Refl impossible
+  ifThenElseNotNormal {x} {y} {z} pf | (Right (Right (Left l))) = case l of
+                                                                       Refl impossible
+  ifThenElseNotNormal {x} {y} {z} pf | (Right (Right (Right (nv ** (pf1, pf2))))) = case pf1 of
+                                                                                         Refl impossible
 ----------------------------
 -- Miscellanea
 ----------------------------
