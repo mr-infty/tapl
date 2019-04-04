@@ -212,19 +212,25 @@ valueIsEither (nv2t x) {pf = (ConvertedFrom (Right x))} = case x of
                                                                (Succ y) => Right (Right (Right (nv2t y ** (Refl, ConvertedFrom y))))
 
 ||| Proof that a term of the form `Succ t` is only a value if `t` is a numeric value.
-succIsValueIf : (pf : IsValue (Succ t)) ->
-                IsNumValue t
+succIsValueIf : IsValue (Succ t) -> IsNumValue t
 succIsValueIf (ConvertedFrom (Left Values.True)) impossible
 succIsValueIf (ConvertedFrom (Left Values.False)) impossible
 succIsValueIf (ConvertedFrom (Right Values.Zero)) impossible
 succIsValueIf (ConvertedFrom (Right (Succ nv))) = ConvertedFrom nv
 
 ||| Proof that a term of the form `Pred t` is never a value.
-predNotValue : (pf : IsValue (Pred t)) -> Void
+predNotValue : IsValue (Pred t) -> Void
 predNotValue (ConvertedFrom (Left Values.True)) impossible
 predNotValue (ConvertedFrom (Left Values.False)) impossible
 predNotValue (ConvertedFrom (Right Values.Zero)) impossible
 predNotValue (ConvertedFrom (Right (Values.Succ nv))) impossible
+
+||| Proof that a term of the form `IsZero t` is never a value.
+isZeroNotValue : IsValue (IsZero t) -> Void
+isZeroNotValue (ConvertedFrom (Left Values.True)) impossible
+isZeroNotValue (ConvertedFrom (Left Values.False)) impossible
+isZeroNotValue (ConvertedFrom (Right Values.Zero)) impossible
+isZeroNotValue (ConvertedFrom (Right (Values.Succ nv))) impossible
 
 ||| Proof that a value only evaluates to itself under the reflexive transitive closure of
 ||| the `E`-evaluation rules.

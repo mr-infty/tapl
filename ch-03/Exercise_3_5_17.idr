@@ -92,18 +92,35 @@ lemma_ESucc {pf} x (r' ** pf') = case r' of
                                                         nv_pf@(ConvertedFrom nv) => (BInESucc {pf=nv_pf} (weaken x) ** cong pf')
                                       BInESucc {pf} d'' => (BInESucc {pf=pf} (Cons x d'') ** cong pf')
 
+lemma_EPred : {t1, t1' : Term} ->
+              {pf : IsValue v} ->
+              (x : EvalsTo t1 t1') ->
+              (r' : BInE (Pred t1') v ** d' = from_BInE_to_E r') ->
+              (r : BInE (Pred t1) v ** Cons (EPred x) d' = from_BInE_to_E r)
+lemma_EPred {pf} x (r' ** pf') = case r' of
+                                      BInEValue {pf=pf_val} => absurd (predNotValue pf_val)
+                                      BInEPredZero y => (BInEPredZero (Cons x y) ** cong pf')
+                                      BInEPredSucc {pf=pf_v} y => (BInEPredSucc {pf=pf_v} (Cons x y) ** cong pf')
+
+lemma_EIsZero : {t1, t1', v : Term} ->
+                {pf : IsValue v} ->
+                (x : EvalsTo t1 t1') ->
+                (r' : BInE (IsZero t1') v ** d' = from_BInE_to_E r') ->
+                (r : BInE (IsZero t1) v ** Cons (EIsZero x) d' = from_BInE_to_E r)
+lemma_EIsZero {pf} x (r' ** pf') = case r' of
+                                        BInEValue {pf=pf_val} => absurd (isZeroNotValue pf_val)
+                                        BInEIsZeroZero y => (BInEIsZeroZero (Cons x y) ** cong pf')
+                                        BInEIsZeroSucc {pf=pf_v} y => (BInEIsZeroSucc {pf=pf_v} (Cons x y) ** cong pf')
+
 ||| Deconstructs a derivation of a term `t` to a value `v` in the `E`-calculus into a (one-step) derivation
 ||| in the `BInE`-calculus.
 from_E_to_BInE : {pf : IsValue v} ->
                  (d : EvalsToStar t v) -> (r : BInE t v ** d = from_BInE_to_E r)
 from_E_to_BInE {pf} {t = True} Refl = (BInEValue {pf=ConvertedFrom (Left True)} {v=True} ** Refl)
-from_E_to_BInE {pf} {t = True} (Cons x y) with (valuesDontEvaluate {pf=ConvertedFrom (Left True)} x)
-  from_E_to_BInE {pf} {t = True} (Cons x y) | with_pat impossible
+from_E_to_BInE {pf} {t = True} (Cons x y) = absurd (valuesDontEvaluate {pf=ConvertedFrom (Left True)} x)
 from_E_to_BInE {pf} {t = False} Refl = (BInEValue {pf=ConvertedFrom (Left False)} {v=False} ** Refl)
-from_E_to_BInE {pf} {t = False} (Cons x y) with (valuesDontEvaluate {pf=ConvertedFrom (Left False)} x)
-  from_E_to_BInE {pf} {t = False} (Cons x y) | with_pat impossible
-from_E_to_BInE {pf} {t = (IfThenElse x y z)} Refl with (ifThenElseNotNormal pf)
-  from_E_to_BInE {pf} {t = (IfThenElse x y z)} Refl | with_pat impossible
+from_E_to_BInE {pf} {t = False} (Cons x y) = absurd (valuesDontEvaluate {pf=ConvertedFrom (Left False)} x)
+from_E_to_BInE {pf} {t = (IfThenElse x y z)} Refl = absurd (ifThenElseNotNormal pf)
 from_E_to_BInE {pf} {t = (IfThenElse x y z)} (Cons w s) = case w of
                                                                EIfTrue => lemma_EIfTrue {pf=pf} s
                                                                EIfFalse => lemma_EIfFalse {pf=pf} s
@@ -118,15 +135,50 @@ from_E_to_BInE {pf} {t = (Succ x)} (Cons y z) = case y of
                                                      ESucc y' => lemma_ESucc {pf=pf} y' (from_E_to_BInE {pf=pf} z)
 from_E_to_BInE {pf} {t = (Pred x)} Refl = absurd (predNotValue pf)
 from_E_to_BInE {pf} {t = (Pred x)} (Cons y z) = case y of
-                                                     EPredZero => ?from_E_to_BInE_rhs_1
-                                                     EPredSucc => ?from_E_to_BInE_rhs_3
-                                                     EPred y' => ?from_E_to_BInE_rhs_4
-from_E_to_BInE {pf} {t = (IsZero x)} d = ?from_E_to_BInE_rhs_8
+                                                     EPredZero => case valuesAreNormal {pf=ConvertedFrom (Right Zero)} z of
+                                                                       Refl => (BInEPredZero Refl ** Refl)
+                                                     EPredSucc {nv1} {pf=pf_nv} => case valuesAreNormal {pf=numValueIsValue pf_nv} z of
+                                                                                        Refl => (BInEPredSucc {pf=pf_nv} Refl ** Refl)
+                                                     EPred y' => lemma_EPred {pf=pf} y' (from_E_to_BInE {pf=pf} z)
+from_E_to_BInE {pf} {t = (IsZero x)} Refl = absurd (isZeroNotValue pf)
+from_E_to_BInE {pf} {t = (IsZero x)} (Cons y z) = case y of
+                                                       EIsZeroZero => case valuesAreNormal {pf=ConvertedFrom (Left True)} z of
+                                                                           Refl => (BInEIsZeroZero Refl ** Refl)
+                                                       EIsZeroSucc => case valuesAreNormal {pf=ConvertedFrom (Left False)} z of
+                                                                           Refl => (BInEIsZeroSucc Refl ** Refl)
+                                                       EIsZero y' => lemma_EIsZero {pf=pf} y' (from_E_to_BInE {pf=pf} z)
+
+||| Converts a derivation in `BInE`-calculus to a derivation in the `B`-calculus.
+from_BInE_to_B : {pf : IsValue v} -> BInE t v -> BigEvalsTo t v
+from_BInE_to_B {pf} BInEValue = BValue {pf=pf}
+from_BInE_to_B {pf} (BInEIfTrue y z) = let pf_true = ConvertedFrom (Left True)
+                                           y' = fst (from_E_to_BInE {pf=pf_true} y)
+                                           z' = fst (from_E_to_BInE {pf=pf} z) in
+                                           BIfTrue {pf=pf} (from_BInE_to_B {pf=pf_true} y') (from_BInE_to_B {pf=pf} z')
+from_BInE_to_B {pf} (BInEIfFalse y z) = let pf_false = ConvertedFrom (Left False)
+                                            y' = fst (from_E_to_BInE {pf=pf_false} y)
+                                            z' = fst (from_E_to_BInE {pf=pf} z) in
+                                            BIfFalse {pf=pf} (from_BInE_to_B {pf=pf_false} y') (from_BInE_to_B {pf=pf} z')
+from_BInE_to_B {pf} (BInESucc {pf=pf_nv} y) = let y' = fst (from_E_to_BInE {pf=numValueIsValue pf_nv} y) in
+                                                  BSucc {pf=pf_nv} (from_BInE_to_B {pf=numValueIsValue pf_nv} y')
+from_BInE_to_B {pf} (BInEPredZero x) = let pf_zero = ConvertedFrom (Right Zero)
+                                           x' = fst (from_E_to_BInE {pf=pf_zero} x) in
+                                           BPredZero (from_BInE_to_B {pf=pf_zero} x')
+from_BInE_to_B {pf} (BInEPredSucc {pf=pf_v} y) = let pf_succ = numValueIsValue (succNumValueIsNumValue pf_v)
+                                                     y' = fst (from_E_to_BInE {pf=pf_succ} y) in
+                                                     BPredSucc {pf=pf_v} (from_BInE_to_B {pf=pf_succ} y')
+from_BInE_to_B {pf} (BInEIsZeroZero x) = let pf_zero = ConvertedFrom (Right Zero)
+                                             x' = fst (from_E_to_BInE {pf=pf_zero} x) in
+                                             BIsZeroZero (from_BInE_to_B {pf=pf_zero} x')
+from_BInE_to_B {pf} (BInEIsZeroSucc {pf=pf_v} y) = let pf_succ = numValueIsValue (succNumValueIsNumValue pf_v)
+                                                       y' = fst (from_E_to_BInE {pf=pf_succ} y) in
+                                                       BIsZeroSucc {pf=pf_v} (from_BInE_to_B {pf=pf_succ} y')
 
 ||| Proof that if a term `t` evaluates to a value `v` under the reflexive transitive
 ||| closure of the small-step evaluation rules, then it also evaluates to it under the
 ||| big-step evaluation rules.
 starImpliesBig : {pf : IsValue v} -> EvalsToStar t v -> BigEvalsTo t v
+starImpliesBig {pf} d = from_BInE_to_B {pf=pf} (fst (from_E_to_BInE {pf=pf} d))
 
 ||| Proof that if a term `t` evaluates to a value `v` under the big-step evaluation rules,
 ||| then it also evaluates to it under the reflexive transitive closure of the small-step
