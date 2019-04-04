@@ -13,24 +13,31 @@ import Arith
 data BInE : Term -> Term -> Type where
   BInEValue : {pf : IsValue v} -> BInE v v
   BInEIfTrue : {pf : IsValue v2} ->
+               {t1, t2, t3 : Term} ->
                EvalsToStar t1 True ->
                EvalsToStar t2 v2 ->
                BInE (IfThenElse t1 t2 t3) v2
   BInEIfFalse : {pf : IsValue v3} ->
+                {t1, t2, t3 : Term} ->
                 EvalsToStar t1 False ->
                 EvalsToStar t3 v3 ->
                 BInE (IfThenElse t1 t2 t3) v3
   BInESucc : {pf : IsNumValue nv1} ->
+             {t1 : Term} ->
              EvalsToStar t1 nv1 ->
              BInE (Succ t1) (Succ nv1)
-  BInEPredZero : EvalsToStar t1 Zero ->
+  BInEPredZero : {t1 : Term} ->
+                 EvalsToStar t1 Zero ->
                  BInE (Pred t1) Zero
-  BInEPredSucc : {pf : IsNumValue nv1} ->
+  BInEPredSucc : {t1 : Term} ->
+                 {pf : IsNumValue nv1} ->
                  EvalsToStar t1 (Succ nv1) ->
                  BInE (Pred t1) nv1
-  BInEIsZeroZero : EvalsToStar t1 Zero ->
+  BInEIsZeroZero : {t1 : Term} ->
+                   EvalsToStar t1 Zero ->
                    BInE (IsZero t1) True
-  BInEIsZeroSucc : {pf : IsNumValue nv1} ->
+  BInEIsZeroSucc : {t1 : Term} ->
+                   {pf : IsNumValue nv1} ->
                    EvalsToStar t1 (Succ nv1) ->
                    BInE (IsZero t1) False
 
@@ -52,17 +59,20 @@ from_BInE_to_E (BInEIsZeroSucc {pf} x) = map EIsZero x ++ weaken (EIsZeroSucc {p
 -- Sublemmas of `from_E_to_BInE`
 --------------------------------------------------------------------------------
 
-lemma_EIfTrue : {pf : IsValue v} ->
+lemma_EIfTrue : {t2, t3 : Term} ->
+                {pf : IsValue v} ->
                 (d' : EvalsToStar t2 v) ->
                 (r : BInE (IfThenElse True t2 t3) v ** Cons EIfTrue d' = from_BInE_to_E r)
 lemma_EIfTrue {pf} d' = (BInEIfTrue {pf=pf} Refl d' ** Refl)
 
-lemma_EIfFalse : {pf : IsValue v} ->
+lemma_EIfFalse : {t2, t3 : Term} ->
+                 {pf : IsValue v} ->
                  (d' : EvalsToStar t3 v) ->
                  (r : BInE (IfThenElse False t2 t3) v ** Cons EIfFalse d' = from_BInE_to_E r)
 lemma_EIfFalse {pf} d' = (BInEIfFalse {pf=pf} Refl d' ** Refl)
 
-lemma_EIf : {pf : IsValue v} ->
+lemma_EIf : {t1, t2, t3 : Term} ->
+            {pf : IsValue v} ->
             {x : EvalsTo t1 t1'} ->
             (d' : EvalsToStar (IfThenElse t1' t2 t3) v) ->
             (r' : BInE (IfThenElse t1' t2 t3) v ** d' = from_BInE_to_E r') ->
@@ -72,7 +82,8 @@ lemma_EIf {pf} {x} d' (r' ** pf') = case r' of
                                          BInEIfTrue d1 d2 => (BInEIfTrue {pf=pf} (Cons x d1) d2 ** cong pf')
                                          BInEIfFalse d1 d2 => (BInEIfFalse {pf=pf} (Cons x d1) d2 ** cong pf')
 
-lemma_ESucc : {pf : IsValue v} ->
+lemma_ESucc : {t1 : Term} ->
+              {pf : IsValue v} ->
               (x : EvalsTo t1 t1') ->
               (r' : BInE (Succ t1') v ** d' = from_BInE_to_E r') ->
               (r : BInE (Succ t1) v ** Cons (ESucc x) d' = from_BInE_to_E r)
