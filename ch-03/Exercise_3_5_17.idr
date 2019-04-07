@@ -184,3 +184,20 @@ starImpliesBig {pf} d = from_BInE_to_B {pf=pf} (fst (from_E_to_BInE {pf=pf} d))
 ||| then it also evaluates to it under the reflexive transitive closure of the small-step
 ||| rules.
 bigImpliesStar : {pf : IsValue v} -> BigEvalsTo t v -> EvalsToStar t v
+bigImpliesStar {pf} BValue = Refl
+bigImpliesStar {pf} (BIfTrue y z) = let y' = bigImpliesStar {pf=ConvertedFrom (Left True)} y
+                                        z' = bigImpliesStar {pf=pf} z in
+                                        from_BInE_to_E (BInEIfTrue {pf=pf} y' z')
+bigImpliesStar {pf} (BIfFalse y z) = let y' = bigImpliesStar {pf=ConvertedFrom (Left False)} y
+                                         z' = bigImpliesStar {pf=pf} z in
+                                         from_BInE_to_E (BInEIfFalse {pf=pf} y' z')
+bigImpliesStar {pf} (BSucc {pf=pf_nv} y) = let y' = bigImpliesStar {pf=numValueIsValue pf_nv} y in
+                                               from_BInE_to_E (BInESucc {pf=pf_nv} y')
+bigImpliesStar {pf} (BPredZero x) = let x' = bigImpliesStar {pf=pf} x in
+                                        from_BInE_to_E (BInEPredZero x')
+bigImpliesStar {pf} (BPredSucc {pf=pf_nv} y) = let y' = bigImpliesStar {pf=numValueIsValue (succNumValueIsNumValue pf_nv)} y in
+                                                   from_BInE_to_E (BInEPredSucc {pf=pf_nv} y')
+bigImpliesStar {pf} (BIsZeroZero x) = let x' = bigImpliesStar {pf=ConvertedFrom (Right Zero)} x in
+                                          from_BInE_to_E (BInEIsZeroZero x')
+bigImpliesStar {pf} (BIsZeroSucc {pf=pf_nv} y) = let y' = bigImpliesStar {pf=numValueIsValue (succNumValueIsNumValue pf_nv)} y in
+                                                     from_BInE_to_E (BInEIsZeroSucc {pf=pf_nv} y')
