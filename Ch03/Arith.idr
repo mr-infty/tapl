@@ -1,4 +1,4 @@
-module Arith
+module Ch03.Arith
 
 %default total
 %access public export

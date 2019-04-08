@@ -1,6 +1,6 @@
-module Exercise_3_5_17
+module Ch03.Exercise_3_5_17
 
-import Arith
+import Ch03.Arith
 
 %default total
 

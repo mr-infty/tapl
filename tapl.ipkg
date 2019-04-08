@@ -1,0 +1,5 @@
+package tapl
+
+modules = Ch03.Arith,
+        , Ch03.Exercise_3_5_14
+        , Ch03.Exercise_3_5_17
