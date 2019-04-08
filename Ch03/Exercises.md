@@ -494,3 +494,57 @@ statement comes down to a simple case-distinction. One minor complication in
 the formal proof of this statement is that in order to prove `r' = r''` in
 certain cases, one is forced to reason about *equality of proofs* (more
 specifically, equality between proofs of type `IsNumValue t`).
+
+## Exercise 3.5.16
+
+\begin{lemma}
+   A term $t$ in the arithmetic language evaluates to a stuck term if
+   and only if it evaluates to $\texttt{wrong}$ when viewed as a term
+   in the augmented language.
+\end{lemma}
+\begin{proof}
+We first show the direction "$\Rightarrow$". For this, we may w.l.o.g. assume
+that $t$ is already stuck. Now, if $t$ is not a value then that means that it
+is of one of the following forms
+
+\begin{enumerate}
+\item $t = \texttt{if }t_1\texttt{ then }t_2\texttt{ else }t_3$
+\item $t = \texttt{iszero }t_1$
+\item $t = \texttt{pred }t_1$
+\item $t = \texttt{succ }t_1$
+\end{enumerate}
+
+Moreover since $t$ is normal, it follows that all the sub-terms $t_i$ are also
+normal, thus they are either values or stuck. More precisely, in each
+respective case that
+
+\begin{enumerate}
+\item $t_1$ is either a numeric value or stuck.
+\item $t_1$ is either a boolean value or stuck.
+\item $t_1$ is either a boolean value or stuck.
+\item $t_1$ is either a boolean value or stuck.
+\end{enumerate}
+
+If $t_1$ is stuck, then using induction we can conclude that $t_1$ evaluates to
+$\texttt{wrong}$ in the augmented language. It then follows that $t$ evaluates
+to $\texttt{wrong}$ in the augmented language (using the rules $\texttt{E-If}$,
+$\texttt{E-IsZero}$, $\texttt{E-Pred}$, and $\texttt{E-Succ}$ respectively).
+
+On the other hand, in the case where $t_1$ is a value it is also a "bad" value
+in the sense of the augmented language, i.e. $t_1$ is a "bad boolean" in the
+first case and a "bad numeric value" in the other cases. Thus, we may
+immediately apply the rules $\texttt{E-If-Wrong}$, $\texttt{E-IsZero-Wrong}$,
+$\texttt{E-Pred-Wrong}$, and $\texttt{E-Succ-Wrong}$ to derive
+$\texttt{wrong}$.
+
+Let us now show the direction "$\Leftarrow$". For this direction, we need to
+make use of the fact\footnote{I won't prove this.} that evaluation in the
+augmented language is still deterministic. From this it follows that we may
+assume w.l.o.g. that $t$ is already fully evaluated in the arithmetic language,
+and we need to show that $t$ is not a value.
+
+But if $t$ is fully evaluated in the arithmetic language but evaluates to
+something in the augmented language, then it follows that we can apply one of
+the "\texttt{-Wrong}" rules to it. Using a simple case distinction it then
+follows that $t$ is not a value.
+\end{proof}
