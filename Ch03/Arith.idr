@@ -49,6 +49,11 @@ namespace IsNumValue
   data IsNumValue : Term -> Type where
     ConvertedFrom : (nv : NumValue) -> IsNumValue (v2t (Right nv))
 
+namespace IsBoolValue
+  ||| Propositional type describing that a term "is" indeed a boolean value
+  data IsBoolValue : Term -> Type where
+    ConvertedFrom : (bv : BoolValue) -> IsBoolValue (v2t (Left bv))
+
 ----------------------------
 -- Evaluation rules
 ----------------------------
