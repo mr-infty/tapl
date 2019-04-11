@@ -155,6 +155,40 @@ numValueIsValue {t = (v2t (Right nv))} (ConvertedFrom nv) = IsValue.ConvertedFro
 succNumValueIsNumValue : IsNumValue t -> IsNumValue (Succ t)
 succNumValueIsNumValue {t = (v2t (Right nv))} (ConvertedFrom nv) = ConvertedFrom (Succ nv)
 
+||| A boolean value is also a value
+boolValueIsValue : IsBoolValue t -> IsValue t
+boolValueIsValue {t = (v2t (Left bv))} (ConvertedFrom bv) = IsValue.ConvertedFrom (Left bv)
+
+numValueEither : IsNumValue t -> Either (t = Zero) (t' : Term ** (IsNumValue t', t = Succ t'))
+numValueEither (ConvertedFrom nv) = case nv of
+                                         Zero => Left Refl
+                                         (Succ nv') => Right (nv2t nv' ** (ConvertedFrom nv', Refl))
+
+boolValueEither : IsBoolValue t -> Either (t = True) (t = False)
+boolValueEither (ConvertedFrom True) = Left Refl
+boolValueEither (ConvertedFrom False) = Right Refl
+
+zeroNotBool : IsBoolValue Zero -> Void
+zeroNotBool (ConvertedFrom True) impossible
+zeroNotBool (ConvertedFrom False) impossible
+
+succNotTrue : {t : Term} -> (Succ t = True) -> Void
+succNotTrue Refl impossible
+
+succNotFalse : {t : Term} -> (Succ t = False) -> Void
+succNotFalse Refl impossible
+
+succNotBool : IsBoolValue (Succ t) -> Void
+succNotBool {t} x = case boolValueEither x of
+                         (Left l) => succNotTrue l
+                         (Right r) => succNotFalse r
+
+||| A value can't be both numeric and boolean at the same time.
+numNotBool : IsNumValue t -> IsBoolValue t -> Void
+numNotBool x y = case numValueEither x of
+                      (Left Refl) => zeroNotBool y
+                      (Right (_ ** (_, Refl))) => succNotBool y
+
 ||| Proof that values don't evaluate to anything in the `E`-calculus.
 valuesDontEvaluate : {pf : IsValue v} -> EvalsTo v t -> Void
 valuesDontEvaluate {pf = (ConvertedFrom (Left bv))} {v = (bv2t bv)} x = case bv of
