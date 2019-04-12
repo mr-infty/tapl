@@ -101,22 +101,49 @@ bool_not_bad_bool {pf} = \x => case x of
                                     IsStuckTerm {pf=pf_stuck} => (values_not_stuck {pf=boolValueIsValue pf}) pf_stuck
                                     IsNat {pf=pf_nat} => numNotBool pf_nat pf
 
+nat_not_bad_nat : {t : Term} -> {pf : IsNumValue t} -> Not (IsBadNat t)
+nat_not_bad_nat {pf} = \x => case x of
+                                  IsStuckTerm {pf=pf_stuck} => (values_not_stuck {pf=numValueIsValue pf}) pf_stuck
+                                  IsBool {pf=pf_bool} => numNotBool pf pf_bool
+
 stuck_is_normal : IsStuck t -> Normal t
 stuck_is_normal (EIfWrong {pf}) = \r => case r of
                                              EIfTrue => (bool_not_bad_bool {pf=ConvertedFrom True}) pf
                                              EIfFalse => (bool_not_bad_bool {pf=ConvertedFrom False}) pf
                                              (EIf {t1} r') => case pf of
-                                                                   IsStuckTerm {pf=pf_stuck} => (stuck_is_normal pf_stuck) r'
+                                                                   IsStuckTerm {pf=pf_stuck} => stuck_is_normal pf_stuck r'
                                                                    IsNat {pf=pf_num} => values_are_normal t1 {pf=numValueIsValue pf_num} r'
-stuck_is_normal ESuccWrong = ?stuck_is_normal_rhs_2
-stuck_is_normal EPredWrong = ?stuck_is_normal_rhs_3
-stuck_is_normal EIsZeroWrong = ?stuck_is_normal_rhs_4
+stuck_is_normal (ESuccWrong {t} {pf}) = \r => case r of
+                                                   (ESucc r') => case pf of
+                                                                      IsStuckTerm {pf=pf_stuck} => stuck_is_normal pf_stuck r'
+                                                                      IsBool {pf=pf_bool} => values_are_normal t {pf=boolValueIsValue pf_bool} r'
+stuck_is_normal (EPredWrong {t} {pf}) = \r => case r of
+                                                   EPredZero => nat_not_bad_nat {pf=ConvertedFrom Zero} pf
+                                                   EPredSucc {nv1=nv} {pf=pf_num} => nat_not_bad_nat {pf=succNumValueIsNumValue pf_num} pf
+                                                   (EPred r') => case pf of
+                                                                      IsStuckTerm {pf=pf_stuck} => stuck_is_normal pf_stuck r'
+                                                                      IsBool {pf=pf_bool} => values_are_normal t {pf=boolValueIsValue pf_bool} r'
+stuck_is_normal (EIsZeroWrong {t} {pf}) = \r => case r of
+                                                     EIsZeroZero => nat_not_bad_nat {pf=ConvertedFrom Zero} pf
+                                                     EIsZeroSucc {nv1=nv} {pf=pf_num} => nat_not_bad_nat {pf=succNumValueIsNumValue pf_num} pf
+                                                     (EIsZero r') => case pf of
+                                                                          IsStuckTerm {pf=pf_stuck} => stuck_is_normal pf_stuck r'
+                                                                          IsBool {pf=pf_bool} => values_are_normal t {pf=boolValueIsValue pf_bool} r'
 
+||| Proof that a fully evaluated terms is also normal.
 fully_evaluated_is_normal : FullyEvaluated t -> Normal t
 fully_evaluated_is_normal (Left pf_stuck) = stuck_is_normal pf_stuck
-fully_evaluated_is_normal (Right pf_value) = ?fully_evaluated_is_normal_rhs_2
+fully_evaluated_is_normal {t} (Right pf_value) = values_are_normal t {pf=pf_value}
 
+||| Proof that a normal term is also fully evaluated.
 normal_is_fully_evaluated : Normal t -> FullyEvaluated t
+normal_is_fully_evaluated {t=True} _ = Right (ConvertedFrom (Left True))
+normal_is_fully_evaluated {t=False} _ = Right (ConvertedFrom (Left False))
+normal_is_fully_evaluated {t=IfThenElse t1 t2 t3} pf_normal = ?normal_is_fully_evaluated_rhs_3
+normal_is_fully_evaluated {t=Zero} _ = Right (ConvertedFrom (Right Zero))
+normal_is_fully_evaluated {t=Succ t'} pf_normal = ?normal_is_fully_evaluated_rhs_5
+normal_is_fully_evaluated {t=Pred t'} pf_normal = ?normal_is_fully_evaluated_rhs_6
+normal_is_fully_evaluated {t=IsZero t'} pf_normal = ?normal_is_fully_evaluated_rhs_7
 
 ||| Given a term, returns its value.
 smallStep_eval : (t : Term) -> (v : Term ** (EvalsToStar t v, FullyEvaluated v))
