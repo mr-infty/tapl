@@ -32,6 +32,19 @@ mutual
                    {pf : IsBadNat t} ->
                    IsStuck (IsZero t)
 
+||| Propositional type describing that one term is an direct subterm of another one.
+data DirectSubTerm : Term -> Term -> Type where
+  IsIfTerm : (x : Term) -> DirectSubTerm x (IfThenElse x y z)
+  IsThenTerm : (y : Term) -> DirectSubTerm y (IfThenElse x y z)
+  IsElseTerm : (z : Term) -> DirectSubTerm z (IfThenElse x y z)
+  IsSuccSubTerm : (x : Term) -> DirectSubTerm x (Succ x)
+  IsPredSubTerm : (x : Term) -> DirectSubTerm x (Pred x)
+
+||| Propositional type describing that one term is a subterm of another one.
+data SubTerm : Term -> Term -> Type where
+  IsSubTermOfDirectSubTerm : SubTerm x y -> DirectSubTerm y z -> SubTerm x z
+  IsEqual : SubTerm x x
+
 -- We are using an ad hoc definition of what it means to be stuck,
 -- which is not exactly the one used in the book (normal but not a value).
 -- This is for convenience. (TODO: Fix this maybe.)
@@ -134,6 +147,14 @@ stuck_is_normal (EIsZeroWrong {t} {pf}) = \r => case r of
 fully_evaluated_is_normal : FullyEvaluated t -> Normal t
 fully_evaluated_is_normal (Left pf_stuck) = stuck_is_normal pf_stuck
 fully_evaluated_is_normal {t} (Right pf_value) = values_are_normal t {pf=pf_value}
+
+||| Proof that a direct subterm of a normal term is normal.
+direct_subterm_of_normal_is_normal : {t1,t2 : Term} -> DirectSubTerm t1 t2 -> Normal t2 -> Normal t1
+direct_subterm_of_normal_is_normal (IsIfTerm x) pf = \r => absurd {t = Void} (pf (EIf ?subterm_of_normal_is_normal_rhs_1))
+direct_subterm_of_normal_is_normal (IsThenTerm y) pf = ?subterm_of_normal_is_normal_rhs_2
+direct_subterm_of_normal_is_normal (IsElseTerm z) pf = ?subterm_of_normal_is_normal_rhs_3
+direct_subterm_of_normal_is_normal (IsSuccSubTerm x) pf = ?subterm_of_normal_is_normal_rhs_4
+direct_subterm_of_normal_is_normal (IsPredSubTerm x) pf = ?subterm_of_normal_is_normal_rhs_5
 
 ||| Proof that a normal term is also fully evaluated.
 normal_is_fully_evaluated : Normal t -> FullyEvaluated t
