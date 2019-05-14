@@ -147,26 +147,35 @@ stuck_is_normal (EIsZeroWrong {t} {pf}) = \_, r => case r of
                                                                              IsStuckTerm {pf=pf_stuck} => stuck_is_normal pf_stuck _ r'
                                                                              IsBool {pf=pf_bool} => values_are_normal t {pf=boolValueIsValue pf_bool} _ r'
 
-||| Proof that a fully evaluated terms is also normal.
+||| Proof that a fully evaluated term is also normal.
 fully_evaluated_is_normal : FullyEvaluated t -> Normal t
 fully_evaluated_is_normal (Left pf_stuck) = stuck_is_normal pf_stuck
 fully_evaluated_is_normal {t} (Right pf_value) = values_are_normal t {pf=pf_value}
 
+-- This is not true! Example: `IfThenElse Zero y z` is always normal, for arbitrary terms `y, z`!
+--
 ||| Proof that a direct subterm of a normal term is normal.
 direct_subterm_of_normal_is_normal : {t1,t2 : Term} -> DirectSubTerm t1 t2 -> Normal t2 -> Normal t1
-direct_subterm_of_normal_is_normal (IsIfTerm x) pf = ?f_hole where
-  f : {t' : Term} -> EvalsTo x t' -> Void
-  f {t'=ymca} = ?hole--absurd {t = Void} (pf (EIf ?subterm_of_normal_is_normal_rhs_1))
+direct_subterm_of_normal_is_normal (IsIfTerm x) pf = \_, r => absurd (pf _ (EIf r))
 direct_subterm_of_normal_is_normal (IsThenTerm y) pf = ?subterm_of_normal_is_normal_rhs_2
 direct_subterm_of_normal_is_normal (IsElseTerm z) pf = ?subterm_of_normal_is_normal_rhs_3
 direct_subterm_of_normal_is_normal (IsSuccSubTerm x) pf = ?subterm_of_normal_is_normal_rhs_4
 direct_subterm_of_normal_is_normal (IsPredSubTerm x) pf = ?subterm_of_normal_is_normal_rhs_5
 
+if_subterm_of_normal_is_normal : {x,y,z : Term} -> Normal (IfThenElse x y z) -> Normal x
+if_subterm_of_normal_is_normal pf = \_, r => absurd (pf _ (EIf r))
+
 ||| Proof that a normal term is also fully evaluated.
 normal_is_fully_evaluated : Normal t -> FullyEvaluated t
 normal_is_fully_evaluated {t=True} _ = Right (ConvertedFrom (Left True))
 normal_is_fully_evaluated {t=False} _ = Right (ConvertedFrom (Left False))
-normal_is_fully_evaluated {t=IfThenElse t1 t2 t3} pf_normal = ?normal_is_fully_evaluated_rhs_3
+normal_is_fully_evaluated {t=IfThenElse t1 t2 t3} pf_normal = case normal_is_fully_evaluated (if_subterm_of_normal_is_normal pf_normal) of
+                                                                   (Left pf_stuck) => Left (EIfWrong {pf=IsStuckTerm {pf=pf_stuck}})
+                                                                   (Right pf_val) => case pf_val of
+                                                                                          (ConvertedFrom (Left bv)) => case bv of
+                                                                                                                            True => absurd (pf_normal _ EIfTrue)
+                                                                                                                            False => absurd (pf_normal _ EIfFalse)
+                                                                                          (ConvertedFrom (Right nv)) => Left (EIfWrong {pf=IsNat {pf=ConvertedFrom nv}})
 normal_is_fully_evaluated {t=Zero} _ = Right (ConvertedFrom (Right Zero))
 normal_is_fully_evaluated {t=Succ t'} pf_normal = ?normal_is_fully_evaluated_rhs_5
 normal_is_fully_evaluated {t=Pred t'} pf_normal = ?normal_is_fully_evaluated_rhs_6
