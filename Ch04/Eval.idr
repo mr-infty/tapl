@@ -54,52 +54,56 @@ FullyEvaluated t = Either (IsStuck t) (IsValue t)
 
 ||| Propositional type describing that a term is normal.
 Normal : Term -> Type
-Normal t = {t' : Term} -> EvalsTo t t' -> Void
+Normal t = (t' : Term) -> EvalsTo t t' -> Void
 
 true_is_normal : Normal True
-true_is_normal = \r => case r of
-                            EIfTrue impossible
-                            EIfFalse impossible
-                            (EIf _) impossible
-                            (ESucc _) impossible
-                            EPredZero impossible
-                            EPredSucc impossible
-                            (EPred _) impossible
-                            EIsZeroZero impossible
-                            EIsZeroSucc impossible
-                            (EIsZero _) impossible
+true_is_normal = \_, r => case r of
+                               EIfTrue impossible
+                               EIfFalse impossible
+                               (EIf _) impossible
+                               (ESucc _) impossible
+                               EPredZero impossible
+                               EPredSucc impossible
+                               (EPred _) impossible
+                               EIsZeroZero impossible
+                               EIsZeroSucc impossible
+                               (EIsZero _) impossible
 
 false_is_normal : Normal False
-false_is_normal = \r => case r of
-                             EIfTrue impossible
-                             EIfFalse impossible
-                             (EIf _) impossible
-                             (ESucc _) impossible
-                             EPredZero impossible
-                             EPredSucc impossible
-                             (EPred _) impossible
-                             EIsZeroZero impossible
-                             EIsZeroSucc impossible
-                             (EIsZero _) impossible
+false_is_normal = \_, r => case r of
+                                EIfTrue impossible
+                                EIfFalse impossible
+                                (EIf _) impossible
+                                (ESucc _) impossible
+                                EPredZero impossible
+                                EPredSucc impossible
+                                (EPred _) impossible
+                                EIsZeroZero impossible
+                                EIsZeroSucc impossible
+                                (EIsZero _) impossible
 
 zero_is_normal : Normal Zero
-zero_is_normal = \r => case r of
-                            EIfTrue impossible
-                            EIfFalse impossible
-                            (EIf _) impossible
-                            (ESucc _) impossible
-                            EPredZero impossible
-                            EPredSucc impossible
-                            (EPred _) impossible
-                            EIsZeroZero impossible
-                            EIsZeroSucc impossible
-                            (EIsZero _) impossible
+zero_is_normal = \_, r => case r of
+                               EIfTrue impossible
+                               EIfFalse impossible
+                               (EIf _) impossible
+                               (ESucc _) impossible
+                               EPredZero impossible
+                               EPredSucc impossible
+                               (EPred _) impossible
+                               EIsZeroZero impossible
+                               EIsZeroSucc impossible
+                               (EIsZero _) impossible
+
+num_values_are_normal_helper : (nv : NumValue) -> Normal (nv2t nv)
+num_values_are_normal_helper nv = case nv of
+                                       Zero => zero_is_normal
+                                       (Succ nv') => \_, r => case r of
+                                                                    (ESucc r') => (num_values_are_normal_helper nv') _ r'
 
 num_values_are_normal : (t : Term) -> {pf : IsNumValue t} -> Normal t
-num_values_are_normal (nv2t nv) {pf=ConvertedFrom nv} = case nv of
-                                                             Zero => zero_is_normal
-                                                             (Succ nv') => \r => case r of
-                                                                                      (ESucc r') => (num_values_are_normal (nv2t nv') {pf=ConvertedFrom nv'}) r'
+num_values_are_normal (nv2t nv) {pf=ConvertedFrom nv} = num_values_are_normal_helper nv
+
 
 values_are_normal : (t : Term) -> {pf : IsValue t} -> Normal t
 values_are_normal (bv2t bv) {pf=ConvertedFrom (Left bv)} = case bv of
@@ -120,28 +124,28 @@ nat_not_bad_nat {pf} = \x => case x of
                                   IsBool {pf=pf_bool} => numNotBool pf pf_bool
 
 stuck_is_normal : IsStuck t -> Normal t
-stuck_is_normal (EIfWrong {pf}) = \r => case r of
-                                             EIfTrue => (bool_not_bad_bool {pf=ConvertedFrom True}) pf
-                                             EIfFalse => (bool_not_bad_bool {pf=ConvertedFrom False}) pf
-                                             (EIf {t1} r') => case pf of
-                                                                   IsStuckTerm {pf=pf_stuck} => stuck_is_normal pf_stuck r'
-                                                                   IsNat {pf=pf_num} => values_are_normal t1 {pf=numValueIsValue pf_num} r'
-stuck_is_normal (ESuccWrong {t} {pf}) = \r => case r of
-                                                   (ESucc r') => case pf of
-                                                                      IsStuckTerm {pf=pf_stuck} => stuck_is_normal pf_stuck r'
-                                                                      IsBool {pf=pf_bool} => values_are_normal t {pf=boolValueIsValue pf_bool} r'
-stuck_is_normal (EPredWrong {t} {pf}) = \r => case r of
-                                                   EPredZero => nat_not_bad_nat {pf=ConvertedFrom Zero} pf
-                                                   EPredSucc {nv1=nv} {pf=pf_num} => nat_not_bad_nat {pf=succNumValueIsNumValue pf_num} pf
-                                                   (EPred r') => case pf of
-                                                                      IsStuckTerm {pf=pf_stuck} => stuck_is_normal pf_stuck r'
-                                                                      IsBool {pf=pf_bool} => values_are_normal t {pf=boolValueIsValue pf_bool} r'
-stuck_is_normal (EIsZeroWrong {t} {pf}) = \r => case r of
-                                                     EIsZeroZero => nat_not_bad_nat {pf=ConvertedFrom Zero} pf
-                                                     EIsZeroSucc {nv1=nv} {pf=pf_num} => nat_not_bad_nat {pf=succNumValueIsNumValue pf_num} pf
-                                                     (EIsZero r') => case pf of
-                                                                          IsStuckTerm {pf=pf_stuck} => stuck_is_normal pf_stuck r'
-                                                                          IsBool {pf=pf_bool} => values_are_normal t {pf=boolValueIsValue pf_bool} r'
+stuck_is_normal (EIfWrong {pf}) = \_, r => case r of
+                                                EIfTrue => (bool_not_bad_bool {pf=ConvertedFrom True}) pf
+                                                EIfFalse => (bool_not_bad_bool {pf=ConvertedFrom False}) pf
+                                                (EIf {t1} r') => case pf of
+                                                                      IsStuckTerm {pf=pf_stuck} => stuck_is_normal pf_stuck _ r'
+                                                                      IsNat {pf=pf_num} => values_are_normal t1 {pf=numValueIsValue pf_num} _ r'
+stuck_is_normal (ESuccWrong {t} {pf}) = \_, r => case r of
+                                                      (ESucc r') => case pf of
+                                                                         IsStuckTerm {pf=pf_stuck} => stuck_is_normal pf_stuck _ r'
+                                                                         IsBool {pf=pf_bool} => values_are_normal t {pf=boolValueIsValue pf_bool} _ r'
+stuck_is_normal (EPredWrong {t} {pf}) = \_, r => case r of
+                                                      EPredZero => nat_not_bad_nat {pf=ConvertedFrom Zero} pf
+                                                      EPredSucc {nv1=nv} {pf=pf_num} => nat_not_bad_nat {pf=succNumValueIsNumValue pf_num} pf
+                                                      (EPred r') => case pf of
+                                                                         IsStuckTerm {pf=pf_stuck} => stuck_is_normal pf_stuck _ r'
+                                                                         IsBool {pf=pf_bool} => values_are_normal t {pf=boolValueIsValue pf_bool} _ r'
+stuck_is_normal (EIsZeroWrong {t} {pf}) = \_, r => case r of
+                                                        EIsZeroZero => nat_not_bad_nat {pf=ConvertedFrom Zero} pf
+                                                        EIsZeroSucc {nv1=nv} {pf=pf_num} => nat_not_bad_nat {pf=succNumValueIsNumValue pf_num} pf
+                                                        (EIsZero r') => case pf of
+                                                                             IsStuckTerm {pf=pf_stuck} => stuck_is_normal pf_stuck _ r'
+                                                                             IsBool {pf=pf_bool} => values_are_normal t {pf=boolValueIsValue pf_bool} _ r'
 
 ||| Proof that a fully evaluated terms is also normal.
 fully_evaluated_is_normal : FullyEvaluated t -> Normal t
@@ -150,7 +154,9 @@ fully_evaluated_is_normal {t} (Right pf_value) = values_are_normal t {pf=pf_valu
 
 ||| Proof that a direct subterm of a normal term is normal.
 direct_subterm_of_normal_is_normal : {t1,t2 : Term} -> DirectSubTerm t1 t2 -> Normal t2 -> Normal t1
-direct_subterm_of_normal_is_normal (IsIfTerm x) pf = \r => absurd {t = Void} (pf (EIf ?subterm_of_normal_is_normal_rhs_1))
+direct_subterm_of_normal_is_normal (IsIfTerm x) pf = ?f_hole where
+  f : {t' : Term} -> EvalsTo x t' -> Void
+  f {t'=ymca} = ?hole--absurd {t = Void} (pf (EIf ?subterm_of_normal_is_normal_rhs_1))
 direct_subterm_of_normal_is_normal (IsThenTerm y) pf = ?subterm_of_normal_is_normal_rhs_2
 direct_subterm_of_normal_is_normal (IsElseTerm z) pf = ?subterm_of_normal_is_normal_rhs_3
 direct_subterm_of_normal_is_normal (IsSuccSubTerm x) pf = ?subterm_of_normal_is_normal_rhs_4
@@ -169,3 +175,4 @@ normal_is_fully_evaluated {t=IsZero t'} pf_normal = ?normal_is_fully_evaluated_r
 ||| Given a term, returns its value.
 smallStep_eval : (t : Term) -> (v : Term ** (EvalsToStar t v, FullyEvaluated v))
 smallStep_eval t = ?smallStep_eval_rhs
+
