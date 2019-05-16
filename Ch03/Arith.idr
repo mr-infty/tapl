@@ -333,7 +333,8 @@ eval (IsZero x) = case x of
                        Zero => Left True
                        Succ y => Left False
                        _ => ?eval_rhs2
-  
+ 
+||| The size of a term is the number of constructors it contains.
 size : Term -> Nat
 size True = 1 
 size False = 1
@@ -343,6 +344,7 @@ size (Succ x) = S (size x)
 size (Pred x) = S (size x)
 size (IsZero x) = S (size x)
 
+||| The depth of a term is depth of its derivation tree.
 depth : Term -> Nat
 depth True = 1
 depth False = 1
