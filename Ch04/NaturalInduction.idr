@@ -1,26 +1,29 @@
 module Ch04.NaturalInduction
 
-import Data.So
+-- TODO: Figure out how to implement the function below (if it's at all possible).
 
 --natural_induction_principle : {a,b : Type} -> 
 --                              (size : a -> Nat) ->
---                              (f : (x : a) -> Either b (x' : a ** So (size x' < size x))) ->
+--                              (f : (x : a) -> Either b (x' : a ** LT (size x') (size x))) ->
 --                              (g : (a -> b) ** (x : a) -> (case f x of
 --                                                                Left y => (g x = y)
---                                                                Right (x' ** _) => (g x = g x')))
+--                                                                Right (y ** _) => (g x = g y)))
 
-fixed_point_principle : {a : Type} ->
-                        {b : a -> Type} ->
-                        (size : a -> Nat) ->
-                        (f : (x : a) -> Either (b x) (x' : a ** So (size x' < size x))) ->
-                        (g : (a -> a) ** ((x : a) -> b (g x)))
-fixed_point_principle {a} {b} size f = (g ** pf) where
-  g_helper : (k : Nat) -> (x : a) -> (size x = k) -> a
-  g_helper Z x prf = case f x of
-                          Left pf_b => ?g_helper_rhs_3
-                          Right (x' ** pf_smaller) => ?g_helper_rhs_4
-  g_helper (S k) x prf = ?g_helper_rhs_2
+lemma : {x : Nat} ->
+        LTE x 0 ->
+        (x = 0)
+lemma {x = Z} pf = Refl
+lemma {x = (S k)} pf = absurd (succNotLTEzero pf)
 
-  g : a -> a
-  
-  pf : (x : a) -> b (g x)
+inductive_construction : {a,b : Type} ->
+                         (size : a -> Nat) ->
+                         (f : (x : a) -> Either b (x' : a ** LT (size x') (size x))) ->
+                         a -> b
+inductive_construction {a} {b} size f x = helper x (size x) lteRefl where
+  helper : (x : a) -> (k : Nat) -> LTE (size x) k -> b
+  helper x k bound = case f x of
+                          Left y => y
+                          Right (x' ** pf) => case k of
+                                                    Z => let temp = replace (lemma bound) pf in
+                                                             absurd (succNotLTEzero temp)
+                                                    (S j) => helper x' j (fromLteSucc (lteTransitive pf bound))

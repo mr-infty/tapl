@@ -198,7 +198,24 @@ normal_is_fully_evaluated {t=IsZero t'} pf_normal = case normal_is_fully_evaluat
 -- Definition of the evaluation function.
 --------------------------------------------------------------------------------
 
-eval_reduces_size : {t,t' : Term} -> EvalsTo t t' -> (k : Fin (size t) ** size t' = finToNat k)
+eval_reduces_size_lemma1 : {n,m : Nat} ->
+                           LTE (S n) (S ((n + m) + 1))
+
+eval_reduces_size_lemma2 : {n,m : Nat} ->
+                           LTE (S m) (S ((n + m) + 1))
+
+--eval_reduces_size : {t,t' : Term} -> EvalsTo t t' -> (k : Fin (size t) ** size t' = finToNat k)
+eval_reduces_size : {t,t' : Term} -> EvalsTo t t' -> LT (size t') (size t)
+eval_reduces_size {t = (IfThenElse True t2 t3)} {t' = t2} EIfTrue = eval_reduces_size_lemma1
+eval_reduces_size {t = (IfThenElse False t2 t3)} {t' = t3} EIfFalse = eval_reduces_size_lemma2
+eval_reduces_size {t = (IfThenElse t1 t2 t3)} {t' = (IfThenElse t1' t2 t3)} (EIf x) = ?eval_reduces_size_rhs_3
+eval_reduces_size {t = (Succ t1)} {t' = (Succ t2)} (ESucc x) = ?eval_reduces_size_rhs_4
+eval_reduces_size {t = (Pred Zero)} {t' = Zero} EPredZero = ?eval_reduces_size_rhs_5
+eval_reduces_size {t = (Pred (Succ t'))} {t' = t'} EPredSucc = ?eval_reduces_size_rhs_6
+eval_reduces_size {t = (Pred t1)} {t' = (Pred t2)} (EPred x) = ?eval_reduces_size_rhs_7
+eval_reduces_size {t = (IsZero Zero)} {t' = True} EIsZeroZero = ?eval_reduces_size_rhs_8
+eval_reduces_size {t = (IsZero (Succ nv1))} {t' = False} EIsZeroSucc = ?eval_reduces_size_rhs_9
+eval_reduces_size {t = (IsZero t1)} {t' = (IsZero t2)} (EIsZero x) = ?eval_reduces_size_rhs_10
 
 either_normal_or_evals : (t : Term) -> Either (Normal t) (t' : Term ** EvalsTo t t')
 
