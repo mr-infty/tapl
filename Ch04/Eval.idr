@@ -204,11 +204,98 @@ eval_reduces_size_lemma1 : {n,m : Nat} ->
 eval_reduces_size_lemma2 : {n,m : Nat} ->
                            LTE (S m) (S ((n + m) + 1))
 
+eval_reduces_size_lemma3 : {n,m,l : Nat} ->
+                           LTE n m ->
+                           LTE (l+n) (l+m)
+eval_reduces_size_lemma3 {l = Z} pf = pf
+eval_reduces_size_lemma3 {l = (S k)} pf = LTESucc (eval_reduces_size_lemma3 pf)
+
+eval_reduces_size_lemma3' : {n,m,l : Nat} ->
+                            LTE n m ->
+                            LTE (n+l) (m+l)
+eval_reduces_size_lemma3' {n} {m} {l} pf = rewrite plusCommutative n l in
+                                                   rewrite plusCommutative m l in
+                                                           eval_reduces_size_lemma3 pf
+
+data ElementaryMonotoneFunction : (Nat -> Nat) -> Type where
+  IsConstant : {c : Nat} -> ElementaryMonotoneFunction (const c)
+  IsIdentity : ElementaryMonotoneFunction (\n => n) --TODO: Figure out why using `id {a=Nat}` fails to type check
+  IsSum : {f,g : Nat -> Nat} ->
+          ElementaryMonotoneFunction f ->
+          ElementaryMonotoneFunction g ->
+          ElementaryMonotoneFunction (\n => (f n) + (g n))
+
+namespace ElementaryStrictlyMonotoneFunction
+  data ElementaryStrictlyMonotoneFunction : (Nat -> Nat) -> Type where
+    IsIdentity : ElementaryStrictlyMonotoneFunction (\n => n)
+    IsSumLeft : {f,g : Nat -> Nat} ->
+                ElementaryStrictlyMonotoneFunction f ->
+                ElementaryMonotoneFunction g ->
+                ElementaryStrictlyMonotoneFunction (\n => (f n) + (g n))
+    IsSumRight : {f,g : Nat -> Nat} ->
+                 ElementaryMonotoneFunction f ->
+                 ElementaryStrictlyMonotoneFunction g ->
+                 ElementaryStrictlyMonotoneFunction (\n => (f n) + (g n))
+
+interface Monotone (P : (Nat -> Nat) -> Type) where
+  monotone : (x, y : Nat) ->
+             {f : Nat -> Nat} ->
+             {pf : P f} ->
+             LTE x y ->
+             LTE (f x) (f y)
+
+interface StrictlyMonotone (P : (Nat -> Nat) -> Type) where
+  strictly_monotone : (x, y : Nat) ->
+                      {f : Nat -> Nat} ->
+                      {pf : P f} ->
+                      LT x y ->
+                      LT (f x) (f y)
+
+Monotone ElementaryMonotoneFunction where
+  monotone x y {f = (const c)} {pf = (IsConstant {c=c})} pf_assum = lteRefl
+  monotone x y {f = (\n => n)} {pf = IsIdentity} pf_assum = pf_assum
+  monotone x y {f = (\n => ((f n) + (g n)))} {pf = (IsSum {f} {g} pf_f pf_g)} pf_assum = let pf_assum_f = monotone x y {f=f} {pf=pf_f} pf_assum
+                                                                                             pf_assum_g = monotone x y {f=g} {pf=pf_g} pf_assum
+                                                                                             temp1 = eval_reduces_size_lemma3 {l=f x} pf_assum_g
+                                                                                             temp2 = eval_reduces_size_lemma3' {l=g y} pf_assum_f in
+                                                                                             lteTransitive temp1 temp2
+
+StrictlyMonotone ElementaryStrictlyMonotoneFunction where
+  strictly_monotone x y {f = (\n => n)} {pf = IsIdentity} pf_assum = pf_assum
+  strictly_monotone x y {f = (\n => ((f n) + (g n)))} {pf = (IsSumLeft {f} {g} pf_f pf_g)} pf_assum = ?some_hole_2
+  strictly_monotone x y {f = (\n => ((f n) + (g n)))} {pf = (IsSumRight {f} {g} pf_f pf_g)} pf_assum = ?some_hole_2
+
+if_then_else_size_f : {n2, n3 : Nat} -> Nat -> Nat
+if_then_else_size_f {n2} {n3} = \n => ((n + n2) + n3) + 1
+
+pf_if_then_else_size_f : {n2, n3 : Nat} ->
+                         ElementaryStrictlyMonotoneFunction (if_then_else_size_f {n2=n2} {n3=n3})
+pf_if_then_else_size_f {n2} {n3} = IsSumLeft (IsSumLeft (IsSumLeft IsIdentity (IsConstant {c=n2})) (IsConstant {c=n3})) (IsConstant {c=1})
+
+--LTE (S (plus (plus (plus (size t1')
+--                                                   (size t2))
+--                                             (size t3))
+--                                       1))
+--                              (plus (plus (plus (size t1) (size t2)) (size t3))
+--                                    1)  
+eval_reduces_size_lemma4 : {n1, n1', n2, n3 : Nat} ->
+                           LTE (S n1') n1 ->
+                           LTE (S (((n1' + n2) + n3) + 1))
+                               (((n1 + n2) + n3) + 1)
+eval_reduces_size_lemma4 {n1} {n1'} {n2} {n3} pf = let pf1 = eval_reduces_size_lemma3 {l=n2 + n3} pf
+                                                       eq1 = plusCommutative (n2 + n3) (S n1')
+                                                       pf2 = replace {P=\n => LTE n ((n2 + n3) + n1)} eq1 pf1
+                                                       eq2 = cong {f=S} (plusAssociative n1' n2 n3)
+                                                       pf3 = replace {P=\n => LTE n ((n2 + n3) + n1)} eq2 pf2
+                                                       pf4 = eval_reduces_size_lemma3 {l=1} pf3 in
+                                                       ?eval_reduces_size_lemma4_rhs
+
 --eval_reduces_size : {t,t' : Term} -> EvalsTo t t' -> (k : Fin (size t) ** size t' = finToNat k)
 eval_reduces_size : {t,t' : Term} -> EvalsTo t t' -> LT (size t') (size t)
 eval_reduces_size {t = (IfThenElse True t2 t3)} {t' = t2} EIfTrue = eval_reduces_size_lemma1
 eval_reduces_size {t = (IfThenElse False t2 t3)} {t' = t3} EIfFalse = eval_reduces_size_lemma2
-eval_reduces_size {t = (IfThenElse t1 t2 t3)} {t' = (IfThenElse t1' t2 t3)} (EIf x) = ?eval_reduces_size_rhs_3
+eval_reduces_size {t = (IfThenElse t1 t2 t3)} {t' = (IfThenElse t1' t2 t3)} (EIf x) = let pf = eval_reduces_size x in
+                                                                                          strictly_monotone (size t1') (size t1) {pf=pf_if_then_else_size_f} pf
 eval_reduces_size {t = (Succ t1)} {t' = (Succ t2)} (ESucc x) = ?eval_reduces_size_rhs_4
 eval_reduces_size {t = (Pred Zero)} {t' = Zero} EPredZero = ?eval_reduces_size_rhs_5
 eval_reduces_size {t = (Pred (Succ t'))} {t' = t'} EPredSucc = ?eval_reduces_size_rhs_6
