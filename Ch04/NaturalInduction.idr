@@ -15,6 +15,7 @@ lemma : {x : Nat} ->
 lemma {x = Z} pf = Refl
 lemma {x = (S k)} pf = absurd (succNotLTEzero pf)
 
+public export
 inductive_construction : {a,b : Type} ->
                          (size : a -> Nat) ->
                          (f : (x : a) -> Either b (x' : a ** LT (size x') (size x))) ->

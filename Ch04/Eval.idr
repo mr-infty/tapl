@@ -1,6 +1,7 @@
 module Ch04.Eval
 
 import Ch03.Arith
+import Ch04.NaturalInduction
 import Data.Fin
 
 %default total
@@ -265,6 +266,9 @@ StrictlyMonotone ElementaryStrictlyMonotoneFunction where
   strictly_monotone x y {f = (\n => ((f n) + (g n)))} {pf = (IsSumLeft {f} {g} pf_f pf_g)} pf_assum = ?some_hole_2
   strictly_monotone x y {f = (\n => ((f n) + (g n)))} {pf = (IsSumRight {f} {g} pf_f pf_g)} pf_assum = ?some_hole_2
 
+-- Note: We need to define `if_then_else_size_f` explicitly using a lambda expression
+-- (instead of pattern matching) because otherwise `pf_if_then_else_size_f` below will
+-- fail to type check.
 if_then_else_size_f : {n2, n3 : Nat} -> Nat -> Nat
 if_then_else_size_f {n2} {n3} = \n => ((n + n2) + n3) + 1
 
@@ -272,23 +276,23 @@ pf_if_then_else_size_f : {n2, n3 : Nat} ->
                          ElementaryStrictlyMonotoneFunction (if_then_else_size_f {n2=n2} {n3=n3})
 pf_if_then_else_size_f {n2} {n3} = IsSumLeft (IsSumLeft (IsSumLeft IsIdentity (IsConstant {c=n2})) (IsConstant {c=n3})) (IsConstant {c=1})
 
---LTE (S (plus (plus (plus (size t1')
---                                                   (size t2))
---                                             (size t3))
---                                       1))
---                              (plus (plus (plus (size t1) (size t2)) (size t3))
---                                    1)  
-eval_reduces_size_lemma4 : {n1, n1', n2, n3 : Nat} ->
-                           LTE (S n1') n1 ->
-                           LTE (S (((n1' + n2) + n3) + 1))
-                               (((n1 + n2) + n3) + 1)
-eval_reduces_size_lemma4 {n1} {n1'} {n2} {n3} pf = let pf1 = eval_reduces_size_lemma3 {l=n2 + n3} pf
-                                                       eq1 = plusCommutative (n2 + n3) (S n1')
-                                                       pf2 = replace {P=\n => LTE n ((n2 + n3) + n1)} eq1 pf1
-                                                       eq2 = cong {f=S} (plusAssociative n1' n2 n3)
-                                                       pf3 = replace {P=\n => LTE n ((n2 + n3) + n1)} eq2 pf2
-                                                       pf4 = eval_reduces_size_lemma3 {l=1} pf3 in
-                                                       ?eval_reduces_size_lemma4_rhs
+succ_size_f : Nat -> Nat
+succ_size_f = \n => S n
+
+pf_succ_size_f : ElementaryStrictlyMonotoneFunction Ch04.Eval.succ_size_f
+pf_succ_size_f = IsSumRight (IsConstant {c=1}) IsIdentity
+
+pred_size_f : Nat -> Nat
+pred_size_f = \n => S n
+
+pf_pred_size_f : ElementaryStrictlyMonotoneFunction Ch04.Eval.pred_size_f
+pf_pred_size_f = IsSumRight (IsConstant {c=1}) IsIdentity
+
+is_zero_size_f : Nat -> Nat
+is_zero_size_f = \n => S n
+
+pf_is_zero_size_f : ElementaryStrictlyMonotoneFunction Ch04.Eval.is_zero_size_f
+pf_is_zero_size_f = IsSumRight (IsConstant {c=1}) IsIdentity
 
 --eval_reduces_size : {t,t' : Term} -> EvalsTo t t' -> (k : Fin (size t) ** size t' = finToNat k)
 eval_reduces_size : {t,t' : Term} -> EvalsTo t t' -> LT (size t') (size t)
@@ -296,17 +300,34 @@ eval_reduces_size {t = (IfThenElse True t2 t3)} {t' = t2} EIfTrue = eval_reduces
 eval_reduces_size {t = (IfThenElse False t2 t3)} {t' = t3} EIfFalse = eval_reduces_size_lemma2
 eval_reduces_size {t = (IfThenElse t1 t2 t3)} {t' = (IfThenElse t1' t2 t3)} (EIf x) = let pf = eval_reduces_size x in
                                                                                           strictly_monotone (size t1') (size t1) {pf=pf_if_then_else_size_f} pf
-eval_reduces_size {t = (Succ t1)} {t' = (Succ t2)} (ESucc x) = ?eval_reduces_size_rhs_4
-eval_reduces_size {t = (Pred Zero)} {t' = Zero} EPredZero = ?eval_reduces_size_rhs_5
-eval_reduces_size {t = (Pred (Succ t'))} {t' = t'} EPredSucc = ?eval_reduces_size_rhs_6
-eval_reduces_size {t = (Pred t1)} {t' = (Pred t2)} (EPred x) = ?eval_reduces_size_rhs_7
-eval_reduces_size {t = (IsZero Zero)} {t' = True} EIsZeroZero = ?eval_reduces_size_rhs_8
-eval_reduces_size {t = (IsZero (Succ nv1))} {t' = False} EIsZeroSucc = ?eval_reduces_size_rhs_9
-eval_reduces_size {t = (IsZero t1)} {t' = (IsZero t2)} (EIsZero x) = ?eval_reduces_size_rhs_10
+eval_reduces_size {t = (Succ t1)} {t' = (Succ t2)} (ESucc x) = let pf = eval_reduces_size x in
+                                                                   strictly_monotone (size t2) (size t1) {pf=pf_succ_size_f} pf
+eval_reduces_size {t = (Pred Zero)} {t' = Zero} EPredZero = lteRefl
+eval_reduces_size {t = (Pred (Succ t'))} {t' = t'} EPredSucc = LTESucc (lteSuccRight lteRefl)
+eval_reduces_size {t = (Pred t1)} {t' = (Pred t2)} (EPred x) = let pf = eval_reduces_size x in
+                                                                   strictly_monotone (size t2) (size t1) {pf=pf_pred_size_f} pf
+eval_reduces_size {t = (IsZero Zero)} {t' = True} EIsZeroZero = lteRefl
+eval_reduces_size {t = (IsZero (Succ nv1))} {t' = False} EIsZeroSucc = LTESucc (LTESucc LTEZero)
+eval_reduces_size {t = (IsZero t1)} {t' = (IsZero t2)} (EIsZero x) = let pf = eval_reduces_size x in
+                                                                         strictly_monotone (size t2) (size t1) {pf=pf_is_zero_size_f} pf
 
 either_normal_or_evals : (t : Term) -> Either (Normal t) (t' : Term ** EvalsTo t t')
 
 ||| Given a term, returns its value.
 smallStep_eval : (t : Term) -> (v : Term ** (EvalsToStar t v, FullyEvaluated v))
-smallStep_eval t = ?smallStep_eval_rhs
+smallStep_eval t = (inductive_construction size' f) (t ** Refl) where
+  a : Type
+  a = (t' : Term ** EvalsToStar t t')
+
+  b : Type
+  b = (t' : Term ** (EvalsToStar t t', FullyEvaluated t'))
+
+  size' : a -> Nat
+  size' (t' ** _) = size t'
+
+  f : (x : a) -> Either b (x' : a ** LT (size' x') (size' x))
+  f (t' ** p) = case either_normal_or_evals t' of
+                     Left pf_normal => Left (t' ** (p, normal_is_fully_evaluated pf_normal))
+                     Right (t'' ** p') => Right ((t'' ** (snoc p p')) ** eval_reduces_size p')
+
 

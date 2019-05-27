@@ -96,6 +96,10 @@ namespace ReflSymmClos
   weaken : rel t1 t2 -> ReflSymmClos rel t1 t2
   weaken x = Cons x Refl
 
+  ||| Dual version of the `Cons` constructor for convenience.
+  snoc : ReflSymmClos rel t t' -> (rel t' t'') -> ReflSymmClos rel t t''
+  snoc p p' = p ++ (weaken p')
+
   ||| Given a function `f` defined on relations of type `rel`, applies that to a relation in the
   ||| reflexive-transitive closure of `rel`
   map : {func : ty -> ty} -> (f : {t1 : ty} -> {t2 : ty} -> rel t1 t2 -> rel (func t1) (func t2)) ->
