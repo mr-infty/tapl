@@ -105,6 +105,25 @@ values_are_normal (bv2t bv) {pf=ConvertedFrom (Left bv)} = case bv of
 values_are_normal (nv2t nv) {pf=ConvertedFrom (Right nv)} = num_values_are_normal (nv2t nv) {pf=ConvertedFrom nv}
 
 values_not_stuck : {t : Term} -> {pf : IsValue t} -> Not (IsStuck t)
+values_not_stuck {t = (bv2t bv)} {pf = (ConvertedFrom (Left bv))} = \pf_stuck => case bv of
+                                                                                      True => case pf_stuck of
+                                                                                                   EIfWrong impossible
+                                                                                                   ESuccWrong impossible
+                                                                                                   EPredWrong impossible
+                                                                                                   EIsZeroWrong impossible
+                                                                                      False => case pf_stuck of
+                                                                                                    EIfWrong impossible
+                                                                                                    ESuccWrong impossible
+                                                                                                    EPredWrong impossible
+                                                                                                    EIsZeroWrong impossible
+values_not_stuck {t = (nv2t nv)} {pf = (ConvertedFrom (Right nv))} = case nv of
+                                                                          Zero => \pf_stuck => case pf_stuck of
+                                                                                                    EIfWrong impossible
+                                                                                                    ESuccWrong impossible
+                                                                                                    EPredWrong impossible
+                                                                                                    EIsZeroWrong impossible
+                                                                          (Succ nv') => \pf_stuck => case pf_stuck of
+                                                                                                          ESuccWrong {pf=pf_wrong_succ} => ?values_not_stuck_rhs_1
 
 bool_not_bad_bool : {t : Term} -> {pf : IsBoolValue t} -> Not (IsBadBool t)
 bool_not_bad_bool {pf} = \x => case x of
@@ -201,9 +220,13 @@ normal_is_fully_evaluated {t=IsZero t'} pf_normal = case normal_is_fully_evaluat
 
 eval_reduces_size_lemma1 : {n,m : Nat} ->
                            LTE (S n) (S ((n + m) + 1))
+eval_reduces_size_lemma1 {n = Z} = LTESucc LTEZero
+eval_reduces_size_lemma1 {n = (S k)} = LTESucc (eval_reduces_size_lemma1 {n=k})
 
 eval_reduces_size_lemma2 : {n,m : Nat} ->
                            LTE (S m) (S ((n + m) + 1))
+eval_reduces_size_lemma2 {n} {m} = rewrite plusCommutative n m in
+                                           eval_reduces_size_lemma1
 
 eval_reduces_size_lemma3 : {n,m,l : Nat} ->
                            LTE n m ->
@@ -263,8 +286,19 @@ Monotone ElementaryMonotoneFunction where
 
 StrictlyMonotone ElementaryStrictlyMonotoneFunction where
   strictly_monotone x y {f = (\n => n)} {pf = IsIdentity} pf_assum = pf_assum
-  strictly_monotone x y {f = (\n => ((f n) + (g n)))} {pf = (IsSumLeft {f} {g} pf_f pf_g)} pf_assum = ?some_hole_2
-  strictly_monotone x y {f = (\n => ((f n) + (g n)))} {pf = (IsSumRight {f} {g} pf_f pf_g)} pf_assum = ?some_hole_2
+  strictly_monotone x y {f = (\n => ((f n) + (g n)))} {pf = (IsSumLeft {f} {g} pf_f pf_g)} pf_assum = let pf_assum_f = strictly_monotone x y {f=f} {pf=pf_f} pf_assum
+                                                                                                          pf_assum' = lteTransitive (lteSuccRight lteRefl) pf_assum
+                                                                                                          pf_assum_g = monotone x y {f=g} {pf=pf_g} pf_assum'
+                                                                                                          temp1 = eval_reduces_size_lemma3 {l=f y} pf_assum_g
+                                                                                                          temp2 = eval_reduces_size_lemma3' {l=g x} pf_assum_f in
+                                                                                                          lteTransitive temp2 temp1
+  strictly_monotone x y {f = (\n => ((f n) + (g n)))} {pf = (IsSumRight {f} {g} pf_f pf_g)} pf_assum = let pf_assum_g = strictly_monotone x y {f=g} {pf=pf_g} pf_assum
+                                                                                                           pf_assum' = lteTransitive (lteSuccRight lteRefl) pf_assum
+                                                                                                           pf_assum_f = monotone x y {f=f} {pf=pf_f} pf_assum'
+                                                                                                           temp1 = eval_reduces_size_lemma3 {l=f x} pf_assum_g
+                                                                                                           temp2 = eval_reduces_size_lemma3' {l=g y} pf_assum_f in
+                                                                                                           rewrite plusSuccRightSucc (f x) (g x) in
+                                                                                                                   lteTransitive temp1 temp2
 
 -- Note: We need to define `if_then_else_size_f` explicitly using a lambda expression
 -- (instead of pattern matching) because otherwise `pf_if_then_else_size_f` below will
@@ -294,7 +328,7 @@ is_zero_size_f = \n => S n
 pf_is_zero_size_f : ElementaryStrictlyMonotoneFunction Ch04.Eval.is_zero_size_f
 pf_is_zero_size_f = IsSumRight (IsConstant {c=1}) IsIdentity
 
---eval_reduces_size : {t,t' : Term} -> EvalsTo t t' -> (k : Fin (size t) ** size t' = finToNat k)
+||| Proof that evaluation reduces size.
 eval_reduces_size : {t,t' : Term} -> EvalsTo t t' -> LT (size t') (size t)
 eval_reduces_size {t = (IfThenElse True t2 t3)} {t' = t2} EIfTrue = eval_reduces_size_lemma1
 eval_reduces_size {t = (IfThenElse False t2 t3)} {t' = t3} EIfFalse = eval_reduces_size_lemma2
@@ -311,7 +345,47 @@ eval_reduces_size {t = (IsZero (Succ nv1))} {t' = False} EIsZeroSucc = LTESucc (
 eval_reduces_size {t = (IsZero t1)} {t' = (IsZero t2)} (EIsZero x) = let pf = eval_reduces_size x in
                                                                          strictly_monotone (size t2) (size t1) {pf=pf_is_zero_size_f} pf
 
+||| Proof that a term is either normal or evaluates to something. Note that this would be
+||| a triviality if we were to assume the law of the excluded middle.
 either_normal_or_evals : (t : Term) -> Either (Normal t) (t' : Term ** EvalsTo t t')
+either_normal_or_evals True = Left true_is_normal
+either_normal_or_evals False = Left false_is_normal
+either_normal_or_evals (IfThenElse t1 t2 t3) = case either_normal_or_evals t1 of
+                                                    Left pf_normal => case normal_is_fully_evaluated pf_normal of
+                                                                           Left pf_stuck => Left (fully_evaluated_is_normal $
+                                                                                           Left (EIfWrong {pf=IsStuckTerm {pf=pf_stuck}}))
+                                                                           Right pf_val => case pf_val of
+                                                                                                (ConvertedFrom (Left True)) => Right (t2 ** EIfTrue)
+                                                                                                (ConvertedFrom (Left False)) => Right (t3 ** EIfFalse)
+                                                                                                (ConvertedFrom (Right nv)) => Left (fully_evaluated_is_normal $
+                                                                                                                             Left (EIfWrong {pf=IsNat {pf=ConvertedFrom nv}}))
+                                                    Right (t1' ** r) => Right ((IfThenElse t1' t2 t3) ** EIf r)
+either_normal_or_evals Zero = Left zero_is_normal
+either_normal_or_evals (Succ t) = case either_normal_or_evals t of
+                                       Left pf_normal => Left (fully_evaluated_is_normal $
+                                                        succ_of_fully_evaluated_is_fully_evaluated $
+                                                        normal_is_fully_evaluated pf_normal)
+                                       Right (t' ** r) => Right ((Succ t') ** (ESucc r))
+either_normal_or_evals (Pred t) = case either_normal_or_evals t of
+                                       Left pf_normal => case normal_is_fully_evaluated pf_normal of
+                                                              Left pf_stuck => Left (fully_evaluated_is_normal $
+                                                                              Left (EPredWrong {pf=IsStuckTerm {pf=pf_stuck}}))
+                                                              Right pf_val => case pf_val of
+                                                                                   (ConvertedFrom (Left bv)) => Left (fully_evaluated_is_normal $
+                                                                                                               Left (EPredWrong {pf=IsBool {pf=ConvertedFrom bv}}))
+                                                                                   (ConvertedFrom (Right Zero)) => Right (Zero ** EPredZero)
+                                                                                   (ConvertedFrom (Right (Succ nv))) => Right ((nv2t nv) ** EPredSucc {pf=ConvertedFrom nv})
+                                       Right (t' ** r) => Right (_ ** (EPred r))
+either_normal_or_evals (IsZero t) = case either_normal_or_evals t of
+                                         Left pf_normal => case normal_is_fully_evaluated pf_normal of
+                                                                Left pf_stuck => Left (fully_evaluated_is_normal $
+                                                                                Left (EIsZeroWrong {pf=IsStuckTerm {pf=pf_stuck}}))
+                                                                Right pf_val => case pf_val of
+                                                                                     (ConvertedFrom (Left bv)) => Left (fully_evaluated_is_normal $
+                                                                                                                 Left (EIsZeroWrong {pf=IsBool {pf=ConvertedFrom bv}}))
+                                                                                     (ConvertedFrom (Right Zero)) => Right (True ** EIsZeroZero)
+                                                                                     (ConvertedFrom (Right (Succ nv))) => Right (False ** EIsZeroSucc {pf=ConvertedFrom nv})
+                                         Right (t' ** r) => Right (_ ** (EIsZero r))
 
 ||| Given a term, returns its value.
 smallStep_eval : (t : Term) -> (v : Term ** (EvalsToStar t v, FullyEvaluated v))
