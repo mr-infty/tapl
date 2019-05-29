@@ -104,6 +104,30 @@ values_are_normal (bv2t bv) {pf=ConvertedFrom (Left bv)} = case bv of
                                                                 False => false_is_normal
 values_are_normal (nv2t nv) {pf=ConvertedFrom (Right nv)} = num_values_are_normal (nv2t nv) {pf=ConvertedFrom nv}
 
+num_value_not_bool_value : (nv : NumValue) -> Not (IsBoolValue (nv2t nv))
+num_value_not_bool_value Zero = \pf_bv => case pf_bv of
+                                               ConvertedFrom True impossible
+                                               ConvertedFrom False impossible
+num_value_not_bool_value (Succ nv) = \pf_bv => case pf_bv of
+                                                    (ConvertedFrom True) impossible
+                                                    (ConvertedFrom False) impossible
+
+num_value_not_stuck : (nv : NumValue) -> Not (IsStuck (nv2t nv))
+num_value_not_stuck Zero = \pf_bad => case pf_bad of
+                                           EIfWrong impossible
+                                           ESuccWrong impossible
+                                           EPredWrong impossible
+                                           EIsZeroWrong impossible
+num_value_not_stuck (Succ nv) = \pf_bad => case pf_bad of
+                                                ESuccWrong {pf=pf_succ_wrong} => case pf_succ_wrong of
+                                                                                      IsStuckTerm {pf=pf_stuck} => absurd ((num_value_not_stuck nv) pf_stuck)
+                                                                                      IsBool {pf=pf_bool} => absurd ((num_value_not_bool_value nv) pf_bool)
+
+num_value_not_bad_nat : (nv : NumValue) -> Not (IsBadNat (nv2t nv))
+num_value_not_bad_nat nv = \pf_bad => case pf_bad of
+                                           IsStuckTerm {pf=pf_stuck} => absurd ((num_value_not_stuck nv) pf_stuck)
+                                           IsBool {pf=pf_bool} => absurd ((num_value_not_bool_value nv) pf_bool)
+
 values_not_stuck : {t : Term} -> {pf : IsValue t} -> Not (IsStuck t)
 values_not_stuck {t = (bv2t bv)} {pf = (ConvertedFrom (Left bv))} = \pf_stuck => case bv of
                                                                                       True => case pf_stuck of
@@ -116,14 +140,7 @@ values_not_stuck {t = (bv2t bv)} {pf = (ConvertedFrom (Left bv))} = \pf_stuck =>
                                                                                                     ESuccWrong impossible
                                                                                                     EPredWrong impossible
                                                                                                     EIsZeroWrong impossible
-values_not_stuck {t = (nv2t nv)} {pf = (ConvertedFrom (Right nv))} = case nv of
-                                                                          Zero => \pf_stuck => case pf_stuck of
-                                                                                                    EIfWrong impossible
-                                                                                                    ESuccWrong impossible
-                                                                                                    EPredWrong impossible
-                                                                                                    EIsZeroWrong impossible
-                                                                          (Succ nv') => \pf_stuck => case pf_stuck of
-                                                                                                          ESuccWrong {pf=pf_wrong_succ} => ?values_not_stuck_rhs_1
+values_not_stuck {t = (nv2t nv)} {pf = (ConvertedFrom (Right nv))} = num_value_not_stuck nv
 
 bool_not_bad_bool : {t : Term} -> {pf : IsBoolValue t} -> Not (IsBadBool t)
 bool_not_bad_bool {pf} = \x => case x of
