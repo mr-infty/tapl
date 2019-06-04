@@ -110,6 +110,42 @@ id_is_closed x pf_occurs_free = case pf_occurs_free of
                                                                     (IsVar Z) => pf_ne Refl
 
 --------------------------------------------------------------------------------
+-- Booleans
+--------------------------------------------------------------------------------
+
+||| The Church boolean true
+tru : Term
+tru = Abs 1 (Abs 0 (Var 1))
+
+||| The Church boolean false
+fls : Term
+fls = Abs 1 (Abs 0 (Var 0))
+
+||| Church encoding of the if-then-else operator
+test : Term
+test = Abs 2 (Abs 1 (Abs 0 (App (App (Var 2) (Var 1)) (Var 0))))
+
+||| Logical AND operator for Church booleans.
+and : Term
+and = Abs 0 (Abs 1 (App (App (Var 0) (Var 1)) fls))
+
+--------------------------------------------------------------------------------
+-- Pairs
+--------------------------------------------------------------------------------
+
+||| Church pair constructor
+pair : Term
+pair = Abs 0 (Abs 1 (Abs 2 (App (App (Var 2) (Var 0)) (Var 1))))
+
+||| Projection onto the first component of a pair
+fst : Term
+fst = Abs 0 (Abs 1 (Var 0))
+
+||| Projection onto the second component of a pair
+snd : Term
+snd = Abs 0 (Abs 1 (Var 1))
+
+--------------------------------------------------------------------------------
 -- Numerals
 --------------------------------------------------------------------------------
 
@@ -136,42 +172,6 @@ plus = Abs 0 (Abs 1 (Abs 2 (Abs 3 ((Var 0) . (Var 2)) . (((Var 1) . (Var 2)) . (
 ||| Multiplication of Church numerals
 times : Term
 times = Abs 0 (Abs 1 ((Var 0) . (plus . (Var 1))) . church_zero)
-
---------------------------------------------------------------------------------
--- Pairs
---------------------------------------------------------------------------------
-
-||| Church pair constructor
-pair : Term
-pair = Abs 0 (Abs 1 (Abs 2 (App (App (Var 2) (Var 0)) (Var 1))))
-
-||| Projection onto the first component of a pair
-fst : Term
-fst = Abs 0 (Abs 1 (Var 0))
-
-||| Projection onto the second component of a pair
-snd : Term
-snd = Abs 0 (Abs 1 (Var 1))
-
---------------------------------------------------------------------------------
--- Booleans
---------------------------------------------------------------------------------
-
-||| The Church boolean true
-tru : Term
-tru = Abs 1 (Abs 0 (Var 1))
-
-||| The Church boolean false
-fls : Term
-fls = Abs 1 (Abs 0 (Var 0))
-
-||| Church encoding of the if-then-else operator
-test : Term
-test = Abs 2 (Abs 1 (Abs 0 (App (App (Var 2) (Var 1)) (Var 0))))
-
-||| Logical AND operator for Church booleans.
-and : Term
-and = Abs 0 (Abs 1 (App (App (Var 0) (Var 1)) fls))
 
 ||| Tests whether a Church numeral is zero or not
 iszro : Term
