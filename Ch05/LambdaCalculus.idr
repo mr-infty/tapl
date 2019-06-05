@@ -13,9 +13,14 @@ data Term = Var Variable
           | Abs Variable Term
           | App Term Term
 
-||| Convenient infix notation for construction function application terms
+||| Convenient infix notation for construction of function application terms
 (.) : Term -> Term -> Term
 (.) = App
+
+-- TODO: Can we get rid of the argument `n`?
+||| Convenience function for constructing lambda terms
+lambda : Nat -> (Term -> Term) -> Term
+lambda n f = Abs n (f (Var n))
 
 MultiAppArgType : (numArgs : Nat) -> Type
 MultiAppArgType Z = Term
@@ -182,3 +187,9 @@ prd : Term
 prd = let zz = pair . church_zero . church_zero
           ss = Abs 0 (pair . (snd . (Var 0)) . (scc . (snd . (Var 0)))) in
           Abs 0 (fst . ((Var 0) . ss) . zz)
+
+--------------------------------------------------------------------------------
+-- Lists
+--------------------------------------------------------------------------------
+
+-- See Ch05.Exercise_5_2_8

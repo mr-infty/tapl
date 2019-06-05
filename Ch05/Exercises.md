@@ -56,3 +56,20 @@ $$\tau(\texttt{sub}\ \texttt{c}_m\ \texttt{c}_n) \leq 4 + \tau(\texttt{prd}\
 
 $$\texttt{equal} = \lambda \texttt{m.}\lambda \texttt{n.and (iszro (m prd n)) (iszro (n prd
 m))}$$
+
+## 5.2.8
+
+\begin{align*}
+\texttt{nil} & = \lambda \texttt{f.}\lambda \texttt{c.c} \\
+%
+\texttt{cons} & = \lambda \texttt{x.} \lambda \texttt{xs.} \lambda
+\texttt{f.}\lambda \texttt{c.f x (xs f c)} \\
+%
+\texttt{isnil} & = \lambda \texttt{l.l (}\lambda \texttt{x.}\lambda
+\texttt{c.fls}\texttt{) tru} \\
+%
+\texttt{head} & = \lambda \texttt{l.l fst nil} \\
+%
+\texttt{tail} & = \lambda \texttt{l.fst (l (} \lambda \texttt{x.}\lambda
+\texttt{c.pair (snd c) (cons x (snd c))} \texttt{) (pair nil nil))}
+\end{align*}
