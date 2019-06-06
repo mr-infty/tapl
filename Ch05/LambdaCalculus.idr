@@ -193,3 +193,21 @@ prd = let zz = pair . church_zero . church_zero
 --------------------------------------------------------------------------------
 
 -- See Ch05.Exercise_5_2_8
+
+--------------------------------------------------------------------------------
+-- Self-replicating terms
+--------------------------------------------------------------------------------
+
+||| The (?) simplest self-replicating term in the lambda calculus
+omega : Term
+omega = let x = Var 0
+            f = Abs 0 (x . x) in
+            f . f
+
+||| The call-by-value version of the fix-point combinator (i.e. Y combinator)
+fix : Term
+fix = let f = Var 0
+          x = Var 1
+          y = Var 2
+          t = Abs 1 f . (Abs 2 (x . x . y)) in
+          Abs 0 (t . t)

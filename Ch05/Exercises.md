@@ -73,3 +73,45 @@ m))}$$
 \texttt{tail} & = \lambda \texttt{l.fst (l (} \lambda \texttt{x.}\lambda
 \texttt{c.pair (snd c) (cons x (snd c))} \texttt{) (pair nil nil))}
 \end{align*}
+
+## 5.2.9
+
+The "if then else"-function for Church booleans is defined as
+
+$$\texttt{test} = \lambda \texttt{b.} \lambda \texttt{x.}\lambda \texttt{y.b
+x y}$$
+
+In words, one applies the Church boolean \texttt{b} to the "then branch" \texttt{x} and
+the "else branch" \texttt{y} as a function.
+
+Now, the problem is that with the call-by-value evaluation strategy, we are
+always evaluating function arguments *first* before we apply them to
+a function. But since the "else value" in the definition of the factorial
+function recursively calls itself, trying to evaluate this term to a value
+would lead to an infinite regress.
+
+This problem is evaded if we use the "baked-in" boolean and their if-then-else
+"function", or rather *expression*, because the evaluation rules
+\texttt{E-IfTrue}, \texttt{E-IfFalse} and \texttt{E-If} together mean that we
+never evaluate the branches before we evaluate the condition, and we only
+evaluate that branch that is taken.
+
+To avoid this problem and still use the Church booleans, we can use the generic
+trick to prevent premature evaluation (which works under the call-by-value
+convention) by wrapping the branches in lambda abstraction:
+
+\begin{align*}
+\texttt{factorial} & = \lambda \texttt{n.(fix g) n tru} \\
+%
+\texttt{g} & = \lambda \texttt{f.} \lambda \texttt{n.(test (iszro n) }\lambda \texttt{z.c}_1\texttt{ }\lambda \texttt{z.r) id} \\
+%
+\texttt{r} & = \texttt{times n (f (prd n))}
+\end{align*}
+
+Wrapping both branches in lambda abstraction (with dummy variable \texttt{z})
+we prevent them from being evaluated before evaluation of \texttt{test};
+afterwards, we supply the dummy value \texttt{id} to get the value back.
+
+**Note:** This trick of wrapping values in lambda forms can also used to create lazy
+versions of common data structures in languages (like potentially infinite lists) that don't support lazy
+evaluation out-of-the-box (like Common Lisp e.g.).
