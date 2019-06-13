@@ -115,3 +115,9 @@ afterwards, we supply the dummy value \texttt{id} to get the value back.
 **Note:** This trick of wrapping values in lambda forms can also used to create lazy
 versions of common data structures in languages (like potentially infinite lists) that don't support lazy
 evaluation out-of-the-box (like Common Lisp e.g.).
+
+## 5.2.10
+
+$$\texttt{churchnat} = \texttt{fix
+}\lambda\texttt{f.}\lambda\texttt{n.if (iszero n) c}_0\texttt{ (scc (f (pred
+n)))}$$
