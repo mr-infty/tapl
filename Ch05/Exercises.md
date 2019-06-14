@@ -121,3 +121,38 @@ evaluation out-of-the-box (like Common Lisp e.g.).
 $$\texttt{churchnat} = \texttt{fix
 }\lambda\texttt{f.}\lambda\texttt{n.if (iszero n) c}_0\texttt{ (scc (f (pred
 n)))}$$
+
+## 5.3.3
+
+Let $t$ be a term in the untyped lambda calculus and let $FV(t)$ denote the set
+of variables occuring freely in $t$. Then
+
+$$\# FV(t) \leq size(t)$$
+
+Here $size(t)$ is the size of the term $t$ (this isn't actually defined in the
+book for the lambda calculus), i.e. the number of nodes in its abstract syntax
+tree, i.e. the number of constructors occuring in it.
+More precisely, we have
+
+\begin{align*}
+size(x) & = 1 \\
+size(\lambda x.y) & = 1 + size(y) \\
+size(f x) & = 1 + size(f) + size(x)
+\end{align*}
+
+To show this, we proceed by structural induction over $t$.
+
+When $t = x$ is a variable, we have $FV(t) = \{x\}$ and $size(t) = 1$. When $t
+= \lambda x.y$, we distinguish two cases. In the first case, $x \not\in FV(y)$
+and $FV(t) = FV(y)$, thus
+
+$$\# FV(t) = \# FV(y) \leq size(y) < 1+size(y) = size(t)$$
+
+In the second case, $x \in FV(y)$ and
+
+$$\# FV(t) = \# FV(y) - 1 \leq size(y) - 1 < size(y) + 1 = size(t)$$
+
+Now when $t = (f x)$, then
+
+$$\# FV(t) \leq \# FV(f) + \# FV(x) \leq size(f) + size(x) < 1 + size(f)
++ size(x) = size(t)$$
